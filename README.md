@@ -13,7 +13,7 @@ I made this app because it was annoying to have to manually select files, copy, 
 All with a few button presses. Swaps are handled dynamically, no third-party downloads required.
 
 ### Installation Instructions
-1. Download `RL_Swapper_Setup_v0.1.0.exe` below.
+1. Download the latest [`release`](https://github.com/NotIPlayForFun/RL-Swapper/releases/).
 2. Run the installer and choose your preferred installation type.
 3. Launch via the Desktop or Start Menu shortcut.
 
