@@ -1,4 +1,4 @@
-# Rocket League Skin Swapper
+# RL-Swapper: A Rocket League Skin Swapper
 
 ## Swap your Rocket League Decals, Boosts, etc. for any item via an easy interface
 
