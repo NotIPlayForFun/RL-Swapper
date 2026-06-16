@@ -1,3 +1,5 @@
+# Based on work by https://github.com/CrunchyRL/RLUPKTools and https://github.com/bitsfdb/VelocityRL
+
 #!/usr/bin/env python3
 import argparse
 import base64
@@ -16,22 +18,6 @@ import re
 import zipfile
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Tuple
-
-try:
-    import tkinter as tk
-    from tkinter import filedialog, messagebox, simpledialog, ttk
-    HAS_GUI = True
-except Exception:
-    HAS_GUI = False
-    class _TkStub:
-        def __getattr__(self, n): return self
-        def __call__(self, *a, **kw): return self
-        def __bool__(self): return False
-        def __iter__(self): return iter([])
-        def pack(self, *a, **kw): return self
-        def grid(self, *a, **kw): return self
-        def configure(self, *a, **kw): return self
-    tk = filedialog = messagebox = simpledialog = ttk = _TkStub()
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

@@ -1,8 +1,8 @@
+# Based on work by https://github.com/CrunchyRL/RLUPKTools and https://github.com/bitsfdb/VelocityRL
+
 #!/usr/bin/env python3
 import argparse
 import base64
-import importlib
-import importlib.util
 import io
 import json
 import os
@@ -16,18 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
-
-# Dummy imports for PyInstaller to include dependencies of dynamically loaded rl_upk_editor
-if False:
-    import concurrent.futures
-    import ctypes
-    import hashlib
-    import zlib
-    import re
-    import zipfile
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from PIL import Image  # ensure Pillow is bundled
+from . import rl_upk_editor as upk
 
 
 
@@ -105,52 +94,6 @@ def default_path(names: Sequence[str]) -> Path:
             if candidate.exists():
                 return candidate
     return here / names[0]
-
-
-def import_rl_upk_editor():
-    try:
-        return importlib.import_module("rl_upk_editor")
-    except Exception:
-        pass
-
-    here = script_dir()
-    names = ["rl_upk_editor.py", "rl_upk_editor(1).py"]
-    candidates = []
-    
-    for name in names:
-        candidates.extend([
-            here / name,
-            here.parent / "python" / name,
-            here.parent / "resources" / "python" / name,
-            here.parent / "resources" / name,
-            here.parent.parent / "python" / name,
-            here.parent.parent / "resources" / "python" / name,
-            Path.cwd() / name,
-            Path.cwd() / "python" / name,
-            Path.cwd() / "resources" / "python" / name,
-        ])
-        if getattr(sys, "_MEIPASS", None):
-            candidates.insert(0, Path(sys._MEIPASS) / name)
-
-    last_err = None
-    for candidate in candidates:
-        if not candidate.exists():
-            continue
-        try:
-            spec = importlib.util.spec_from_file_location("rl_upk_editor", candidate)
-            if spec is None or spec.loader is None:
-                continue
-            module = importlib.util.module_from_spec(spec)
-            sys.modules["rl_upk_editor"] = module
-            spec.loader.exec_module(module)
-            return module
-        except Exception as e:
-            last_err = e
-            continue
-
-    if last_err:
-        raise ImportError(f"Failed to load rl_upk_editor from {len(candidates)} candidates. Last error: {last_err}")
-    raise ImportError("Could not find rl_upk_editor.py in any search path.")
 
 
 def load_items(path: Path) -> List[Item]:
@@ -1545,8 +1488,6 @@ def cli_run(args: argparse.Namespace) -> int:
         raise SystemExit("--target is required for --revert")
     if not is_pfp_mode and not args.revert and (not args.target or not args.donor):
         raise SystemExit("--target and --donor are required")
-
-    upk = import_rl_upk_editor()
 
     keys = args.keys
     if keys is None:

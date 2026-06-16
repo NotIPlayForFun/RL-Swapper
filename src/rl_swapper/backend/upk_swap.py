@@ -259,7 +259,8 @@ def prepare_swap(
 
     command = [
         sys.executable,
-        str(swapper_path),
+        "-m",
+        "rl_swapper.resources.python.rl_asset_swapper",
         "--donor-dir",
         str(source_donor_dir),
         "--output-dir",

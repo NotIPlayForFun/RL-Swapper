@@ -9,7 +9,9 @@ description = "A utility to swap UPK files for Rocket League."
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    # list dependencies here in the future
+    "cryptography",
+    "Pillow",
+    "requests",
 ]
 
 [project.scripts]
