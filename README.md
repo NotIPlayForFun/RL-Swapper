@@ -1,4 +1,4 @@
-# RL UPK Swapper
+# Rocket League Skin Swapper
 
 ## Swap your Rocket League Decals, Boosts, etc. for any item via an easy interface
 
