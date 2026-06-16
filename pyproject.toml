@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-swapper"
+version = "0.1.0"
+description = "A utility to swap UPK files for Rocket League."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    # list dependencies here in the future
+]
+
+[project.scripts]
+rl-swapper-cli = "rl_swapper.cli:main"
+rl-swapper-gui = "rl_swapper.gui.interface:run_ui"

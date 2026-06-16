@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+swap_runs/
+app_settings.json
+*.egg-info/
+test/
+**/swap_runs/
+items_reference.json
+
+# PyInstaller artifacts
+build/
+dist/
+*.spec
