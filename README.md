@@ -1,7 +1,8 @@
 # RL UPK Swapper
 
 ## Swap your Rocket League Decals, Boosts, etc. for any item via an easy interface
-Initial standalone offline installer release for **RL Swapper**! 
+
+I made this app because it was annoying to have to manually select files, copy, make backups, and keep track of changes. 
 
 ### Features
 * Intuitive UI
