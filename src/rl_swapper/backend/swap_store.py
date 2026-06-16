@@ -67,6 +67,8 @@ def list_swaps(runs_dir: Path) -> list[SwapRecord]:
             swap = load_swap_manifest(child)
             if swap is not None:
                 swaps.append(swap)
+    # sort by creation time desc
+    swaps.sort(key=lambda s: s.created_at, reverse=True)
     return swaps
 
 

@@ -78,6 +78,9 @@ def default_path(names: Sequence[str]) -> Path:
     for name in names:
         candidates = [
             here / name,
+            here / "python" / name,
+            here / "resources" / name,
+            here / "resources" / "python" / name,
             here.parent / "python" / name,
             here.parent / "resources" / "python" / name,
             here.parent / "resources" / name,
@@ -88,7 +91,13 @@ def default_path(names: Sequence[str]) -> Path:
             Path.cwd() / "resources" / "python" / name,
         ]
         if getattr(sys, "_MEIPASS", None):
-            candidates.insert(0, Path(sys._MEIPASS) / name)
+            meipass = Path(sys._MEIPASS)
+            candidates = [
+                meipass / name,
+                meipass / "python" / name,
+                meipass / "resources" / name,
+                meipass / "resources" / "python" / name,
+            ] + candidates
             
         for candidate in candidates:
             if candidate.exists():
@@ -469,13 +478,14 @@ def build_reencrypted_package_with_output_key(upk, original_encrypted_path: Path
     return output_path
 
 _keys_map: Optional[dict] = None
+_keys_map_path: Optional[Path] = None
 
 def _load_keys_map() -> dict:
     global _keys_map
     if _keys_map is not None:
         return _keys_map
     try:
-        map_path = default_path(("keys_map.json",))
+        map_path = _keys_map_path or default_path(("keys_map.json",))
         if map_path.exists():
             import json
             _keys_map = json.loads(map_path.read_text(encoding="utf-8"))
@@ -1384,6 +1394,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser()
     p.add_argument("--items", type=Path, default=default_path(("items.json", "items(4).json")))
     p.add_argument("--keys", type=Path, default=None)
+    p.add_argument("--keys-map", type=Path, default=None)
     p.add_argument("--work-dir", type=Path, default=None, help="Directory for temporary working files")
     p.add_argument("--donor-dir", "--upk-dir", "--input-dir", dest="donor_dir", type=Path, default=None)
     p.add_argument("--output-dir", "--out-dir", dest="output_dir", type=Path, default=None)
@@ -1473,6 +1484,12 @@ def interactive_run(args: argparse.Namespace) -> int:
 
 
 def cli_run(args: argparse.Namespace) -> int:
+    global _keys_map, _keys_map_path
+
+    # Reset cached key map per invocation and respect explicit map path when provided.
+    _keys_map = None
+    _keys_map_path = args.keys_map
+
     is_pfp_mode = bool(args.custom_pfp or getattr(args, 'pfp_png', None))
 
     # If any required args are missing, try interactive mode if we're in a TTY

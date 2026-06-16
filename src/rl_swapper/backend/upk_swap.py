@@ -181,6 +181,9 @@ def prepare_swap(
     donor: ItemRecord,
     target: ItemRecord,
     swapper_path: Path,
+    items_path: Path,
+    keys_path: Path | None,
+    keys_map_path: Path | None,
     source_dir: Path,
     runs_dir: Path,
     work_dir: Path,
@@ -257,10 +260,9 @@ def prepare_swap(
 
     write_comments(run_dir, target_name, donor_name, target_comment, donor_comment, overall_comment)
 
-    command = [
-        sys.executable,
-        "-m",
-        "rl_swapper.resources.python.rl_asset_swapper",
+    swapper_args = [
+        "--items",
+        str(items_path),
         "--donor-dir",
         str(source_donor_dir),
         "--output-dir",
@@ -274,22 +276,43 @@ def prepare_swap(
         "--donor",
         str(donor.item_id),
     ]
+    if keys_path and keys_path.exists():
+        swapper_args.extend(["--keys", str(keys_path)])
+    if keys_map_path and keys_map_path.exists():
+        swapper_args.extend(["--keys-map", str(keys_map_path)])
     if with_thumbnails:
-        command.append("--include-thumbnails")
+        swapper_args.append("--include-thumbnails")
     else:
-        command.append("--no-thumbnails")
+        swapper_args.append("--no-thumbnails")
 
-    result = subprocess.run(
-        command,
-        cwd=Path(__file__).resolve().parent,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        details = result.stderr.strip() or result.stdout.strip() or f"rl_asset_swapper.py failed with exit code {result.returncode}"
-        print(details, file=sys.stderr)
-        raise SystemExit(details)
+    if getattr(sys, "frozen", False):
+        # In PyInstaller builds, sys.executable points to the bundled app,
+        # so spawning "-m rl_swapper..." is unreliable. Run swapper in-process.
+        from rl_swapper.resources.python import rl_asset_swapper as swapper_module
+
+        parser = swapper_module.build_arg_parser()
+        parsed_args = parser.parse_args(swapper_args)
+        return_code = swapper_module.cli_run(parsed_args)
+        if return_code != 0:
+            raise SystemExit(f"rl_asset_swapper failed with exit code {return_code}")
+    else:
+        command = [
+            sys.executable,
+            "-m",
+            "rl_swapper.resources.python.rl_asset_swapper",
+            *swapper_args,
+        ]
+        result = subprocess.run(
+            command,
+            cwd=run_dir,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            details = result.stderr.strip() or result.stdout.strip() or f"rl_asset_swapper.py failed with exit code {result.returncode}"
+            print(details, file=sys.stderr)
+            raise SystemExit(details)
 
     swap = SwapRecord(
         run_name=run_name,

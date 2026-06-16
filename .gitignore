@@ -11,4 +11,8 @@ items_reference.json
 # PyInstaller artifacts
 build/
 dist/
-*.spec
+# *.spec # Include PyInstaller spec file for building releases
+
+# Installer
+# ignore the setup exe:
+RL_Swapper_Setup_*.exe

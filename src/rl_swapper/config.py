@@ -18,7 +18,7 @@ from dataclasses import dataclass, asdict
 
 # ---- Read-only data (assets/shipped data lives in app dir) ----
 if getattr(sys, 'frozen', False):
-    APP_DIR = Path(sys.executable).parent
+    APP_DIR = Path(sys._MEIPASS)
 else:
     APP_DIR = Path(__file__).resolve().parent
 
@@ -48,6 +48,14 @@ class AppSettings:
     @property
     def items_path(self) -> Path:
         return Path(self.velocityrl_root) / "python" / "items.json"
+
+    @property
+    def keys_path(self) -> Path:
+        return Path(self.velocityrl_root) / "python" / "keys.txt"
+
+    @property
+    def keys_map_path(self) -> Path:
+        return Path(self.velocityrl_root) / "python" / "keys_map.json"
 
     @property
     def swapper_path(self) -> Path:
