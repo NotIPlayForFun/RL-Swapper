@@ -14,7 +14,7 @@ All with a few button presses. Swaps are handled dynamically, no third-party dow
 
 ### Installation Instructions
 1. Download the latest [`release`](https://github.com/NotIPlayForFun/RL-Swapper/releases/).
-2. Run the installer and choose your preferred installation type.
+2. Run the installer.
 3. Launch via the Desktop or Start Menu shortcut.
 
 (*Developer alternative*: You should also be able to clone the repo and run interface.py directly, or compile using `pyinstaller rl-swapper.spec --clean`. This requires installing the dependencies and is currently untested.)
