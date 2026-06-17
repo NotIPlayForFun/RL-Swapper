@@ -1,19 +1,20 @@
-# RL UPK Swapper
+# RL-Swapper: A Rocket League Skin Swapper
 
-A tool to orchestrate Rocket League UPK modifications.
+## Swap your Rocket League Decals, Boosts, etc. for any item via an easy interface
 
-## Installation
+I made this app because it was annoying to have to manually select files, copy, make backups, and keep track of changes. 
 
-```bash
-pip install -e .
-```
+### Features
+* Intuitive UI
+* Easily prepare asset swaps (f.e., replace bubbles boost -> alpha boost)
+* Push swaps to RL
+* Revert swaps to automatic backups
 
-## Quick Start
+All with a few button presses. Swaps are handled dynamically, no third-party downloads required.
 
-You can now use either the command-line interface or the visual interface from anywhere:
+### Installation Instructions
+1. Download the latest [`release`](https://github.com/NotIPlayForFun/RL-Swapper/releases/).
+2. Run the installer.
+3. Launch via the Desktop or Start Menu shortcut.
 
-```bash
-rl-swap-cli --help
-# OR
-rl-swap-gui
-```
+(*Developer alternative*: You should also be able to clone the repo and run interface.py directly, or compile using `pyinstaller rl-swapper.spec --clean`. This requires installing the dependencies and is currently untested.)
