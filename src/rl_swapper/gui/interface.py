@@ -120,7 +120,7 @@ class SwapManagerApp:
         self.settings = config.load_settings()
         self.runs_dir = Path(self.settings.runs_dir)
         config.setup_logging()
-        backend.ensure_workspace(self.settings.items_path, self.settings.swapper_path, self.runs_dir)
+        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path, self.runs_dir)
         self.root = root
         self.root.title("RL Swap Dashboard")
         self.root.geometry("1480x860")
@@ -374,6 +374,8 @@ class SwapManagerApp:
 
     def refresh_overview(self, select_run_name: str | None = None) -> None:
         self.swaps = backend.list_swaps(self.runs_dir)
+        print(f"Loaded {len(self.swaps)} swaps from disk")
+        print(f"runs_dir: {self.runs_dir}")
         query = self.swap_search_var.get().strip().lower()
         if query:
             self.swaps = [

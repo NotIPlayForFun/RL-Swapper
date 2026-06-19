@@ -49,6 +49,15 @@ class AppSettings:
     shipped_data_dir: str = str(SHIPPED_DATA_DIR)
     work_dir: str = DEFAULT_WORK_DIR # for decrypted files, used by rl_asset_swapper.py
     runs_dir: str = str(USER_DATA_DIR / "swap_runs")
+    db_file: str = str(SWAPS_DB_FILE)
+    
+    @property
+    def db_file_path(self) -> Path:
+        return Path(self.db_file)
+    
+    @property
+    def runs_dir_path(self) -> Path:
+        return Path(self.runs_dir)
 
     @property
     def items_path(self) -> Path:

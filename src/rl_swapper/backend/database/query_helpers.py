@@ -1,8 +1,8 @@
 from rl_swapper.backend.swap_store import SwapRecord
 
 
-SWAP_TABLE_COLUMNS = [
-    "run_name", "run_dir", "target_name", "donor_name", 
+SWAP_DATA_COLUMNS = [
+    "target_name", "donor_name", 
     "target_id", "donor_id", "target_product", "donor_product", 
     "target_quality", "donor_quality", "target_slot", "donor_slot", 
     "target_unlock_method", "donor_unlock_method", "target_asset_package", 
@@ -22,8 +22,6 @@ def columns_to_params_stringlist(columns: list[str]) -> str:
 def params_to_values_dir(swap: SwapRecord) -> dict[str, str | int | bool | None]:
     """Convert a SwapRecord into a dict suitable for SQL parameter binding."""
     return {
-        "run_name": swap.run_name,
-        "run_dir": swap.run_dir,
         "target_name": swap.target_name,
         "donor_name": swap.donor_name,
         "target_id": swap.target_id,

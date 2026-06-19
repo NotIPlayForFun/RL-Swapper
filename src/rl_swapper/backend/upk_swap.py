@@ -49,8 +49,10 @@ from rl_swapper.backend.swap_store import (
 )
 
 
-def ensure_workspace(items_path: Path, swapper_path: Path, runs_dir: Path) -> None:
+def initiate_backend(items_path: Path, swapper_path: Path, runs_dir: Path) -> None:
     """Validate that required UPK tools dependencies exist and create the runs folder.
+    
+    Handle database migration from legacy .json manifests if needed.
 
     Exits the process with an error message if the item catalog or the swapper
     script from UPK tools are missing.
@@ -60,6 +62,8 @@ def ensure_workspace(items_path: Path, swapper_path: Path, runs_dir: Path) -> No
     if not swapper_path.exists():
         raise SystemExit(f"Missing rl_asset_swapper.py at {swapper_path}")
     runs_dir.mkdir(parents=True, exist_ok=True)
+    
+    
 
 
 def revert_swap(swap: SwapRecord, rl_source_dir: Path) -> SwapRecord:
@@ -315,8 +319,6 @@ def prepare_swap(
             raise SystemExit(details)
 
     swap = SwapRecord(
-        run_name=run_name,
-        run_dir=str(run_dir),
         target_name=target_name,
         donor_name=donor_name,
         target_id=target.item_id,
@@ -376,5 +378,5 @@ def push_swap(swap: SwapRecord, rl_source_dir: Path) -> SwapRecord:
     run_dir = Path(swap.run_dir)
     push_swap_output_to_rl(run_dir, swap.target_name, swap.target_thumb_name, swap.with_thumbnails, rl_source_dir)
     updated = mark_swap_pushed(swap)
-    print(f"Push complete for {swap.run_name}; RL folder updated.")
+    print(f"Push complete for {swap.id}; RL folder updated.")
     return updated

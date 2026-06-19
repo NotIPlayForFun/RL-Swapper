@@ -821,6 +821,49 @@ def build_output(upk, donor_path: Path, target_key_path: Path, modified, provide
         output_path.write_bytes(modified.file_bytes)
         log.append("Saved decrypted/decompressed output because input was not encrypted.")
 
+def swap_one_package(upk, source_path: Path, output_path: Path, key_source_path: Path, pairs: Sequence[Tuple[str, str]], options: SwapOptions) -> Tuple[Path, List[str]]:
+    log: List[str] = []
+    cleanup_old_temp_files(options.output_dir, options.logger)
+    if not source_path.exists():
+        raise FileNotFoundError(f"Source package not found: {source_path}")
+    if output_path.exists() and not options.overwrite:
+        raise FileExistsError(f"Output already exists: {output_path}")
+
+    temp_dir = options.work_dir / "AssetSwapper_Decrypted"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    keys_path = options.keys_path or load_settings().keys_path
+
+    log.append(f"Input source:        {source_path}")
+    log.append(f"Output target:       {output_path}")
+    log.append(f"Key source target:   {key_source_path}")
+
+    resolved_path, package, provider, actual_keys_path, was_encrypted = resolve_with_optional_keys(upk, source_path, temp_dir, keys_path)
+    log.append(f"Resolved package:    {resolved_path}")
+    if actual_keys_path:
+        log.append(f"Keys file:           {actual_keys_path}")
+    log.append(f"Original offsets:    {summary_line(package)}")
+
+    log.append("Name-table changes:")
+    for old, new in pairs:
+        log.append(f"  {old!r} -> {new!r}")
+
+    modified, rename_log = apply_name_pairs(upk, package, pairs, options.preserve_header_offsets)
+    log.extend(rename_log)
+    log.append(f"Modified offsets:    {summary_line(modified)}")
+
+    backup_path = output_path.with_suffix(output_path.suffix + ".bak")
+    if backup_path.exists():
+        raise RuntimeError(
+            f"{output_path.name} is already swapped — restore it first before swapping again."
+        )
+
+    if output_path.exists() and options.overwrite:
+        shutil.copy2(output_path, backup_path)
+        log.append(f"Backup written:      {backup_path}")
+
+    build_output(upk, source_path, key_source_path, modified, provider, output_path, was_encrypted, log)
+    return output_path, log
 
 def swap_asset(upk, target: Item, donor: Item, options: SwapOptions) -> Tuple[List[Path], List[str]]:
     if target.slot != donor.slot:
