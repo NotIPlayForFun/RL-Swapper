@@ -67,7 +67,7 @@ def enable_windows_dpi_awareness() -> None:
 
 
 def swap_border_color(swap: backend.SwapRecord) -> str:
-    return GREEN if swap.pushed else ORANGE
+    return GREEN if swap.is_pushed() else ORANGE
 
 
 def format_item_details(item: backend.ItemRecord | None) -> str:
@@ -92,7 +92,7 @@ def format_swap_details(swap: backend.SwapRecord | None) -> str:
     return "\n".join(
         [
             f"Run: {swap.run_name}",
-            f"Status: {'Pushed' if swap.pushed else 'Prepared, not pushed'}", 
+            f"Status: {'Pushed' if swap.is_pushed() else 'Prepared, not pushed'}", 
             f"Created: {swap.created_at}",
             f"Pushed at: {swap.pushed_at or '(not pushed)'}",
             "",
@@ -384,7 +384,7 @@ class SwapManagerApp:
                 or query in swap.donor_product.lower()
                 or query in (swap.target_slot or "").lower()
                 or query in (swap.donor_slot or "").lower()
-                or query in ("pushed" if swap.pushed else "prepared")
+                or query in ("pushed" if swap.is_pushed() else "prepared")
             ]
         if select_run_name is not None:
             for swap in self.swaps:
@@ -733,7 +733,7 @@ class SwapManagerApp:
         return (0, (value or "").lower())
 
     def confirm_delete_swap(self, swap: backend.SwapRecord) -> None:
-        if swap.pushed:
+        if swap.is_pushed():
             messagebox.showinfo("Swap pushed", "Only prepared swaps can be deleted.")
             return
         if not messagebox.askyesno("Delete prepared swap", f"Delete the prepared swap run '{swap.run_name}'? This removes the local swap files."):

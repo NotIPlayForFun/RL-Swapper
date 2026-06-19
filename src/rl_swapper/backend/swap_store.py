@@ -7,6 +7,8 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+# import typing so we can make strings be literal "prepared" or "pushed"
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -32,9 +34,14 @@ class SwapRecord:
     with_thumbnails: bool
     target_thumb_name: str
     donor_thumb_name: str
-    pushed: bool
+    # pushed: bool
+    status: Literal["prepared", "pushed", "reverted", "deleted"]
     created_at: str
-    pushed_at: str = ""
+    pushed_at: str | None = None
+    id: int | None = None
+    
+    def is_pushed(self) -> bool:
+        return self.status == "pushed"
 
 
 def swap_manifest_path(run_dir: Path) -> Path:
@@ -73,12 +80,12 @@ def list_swaps(runs_dir: Path) -> list[SwapRecord]:
 
 
 def mark_swap_pushed(swap: SwapRecord) -> SwapRecord:
-    updated = SwapRecord(**{**asdict(swap), "pushed": True, "pushed_at": datetime.now().isoformat(timespec="seconds")})
+    updated = SwapRecord(**{**asdict(swap), "status": "pushed", "pushed_at": datetime.now().isoformat(timespec="seconds")})
     save_swap_manifest(updated)
     return updated
 
 
 def mark_swap_unpushed(swap: SwapRecord) -> SwapRecord:
-    updated = SwapRecord(**{**asdict(swap), "pushed": False, "pushed_at": ""})
+    updated = SwapRecord(**{**asdict(swap), "status": "prepared", "pushed_at": None})
     save_swap_manifest(updated)
     return updated

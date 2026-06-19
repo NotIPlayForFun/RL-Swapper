@@ -15,7 +15,7 @@ By default this:
   - runs python/rl_asset_swapper.py without thumbnails
     - leaves the live RL folder untouched unless --write-back is given
 
-If you move this script outside the repo, set VELOCITYRL_ROOT to the folder
+If you move this script outside the repo, set UPK_TOOLS to the folder
 that still contains python/items.json and python/rl_asset_swapper.py.
 
 With --with-thumbnails, provide --target-thumb/--donor-thumb if you want to
@@ -50,10 +50,10 @@ from rl_swapper.backend.swap_store import (
 
 
 def ensure_workspace(items_path: Path, swapper_path: Path, runs_dir: Path) -> None:
-    """Validate that required VelocityRL dependencies exist and create the runs folder.
+    """Validate that required UPK tools dependencies exist and create the runs folder.
 
     Exits the process with an error message if the item catalog or the swapper
-    script from VelocityRL are missing.
+    script from UPK tools are missing.
     """
     if not items_path.exists():
         raise SystemExit(f"Missing items.json at {items_path}")
@@ -288,7 +288,7 @@ def prepare_swap(
     if getattr(sys, "frozen", False):
         # In PyInstaller builds, sys.executable points to the bundled app,
         # so spawning "-m rl_swapper..." is unreliable. Run swapper in-process.
-        from rl_swapper.resources.python import rl_asset_swapper as swapper_module
+        from rl_swapper.backend.engine import rl_asset_swapper as swapper_module
 
         parser = swapper_module.build_arg_parser()
         parsed_args = parser.parse_args(swapper_args)
@@ -299,7 +299,7 @@ def prepare_swap(
         command = [
             sys.executable,
             "-m",
-            "rl_swapper.resources.python.rl_asset_swapper",
+            "rl_swapper.backend.engine.rl_asset_swapper",
             *swapper_args,
         ]
         result = subprocess.run(
@@ -336,8 +336,9 @@ def prepare_swap(
         with_thumbnails=with_thumbnails,
         target_thumb_name=target_thumb_name,
         donor_thumb_name=donor_thumb_name,
-        pushed=False,
+        status="prepared",
         created_at=stamp,
+        pushed_at=None,
     )
 
     if write_back:

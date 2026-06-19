@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from ...config import load_settings
 from . import rl_upk_editor as upk
 
 
@@ -65,44 +66,6 @@ class SwapOptions:
     preserve_header_offsets: bool
     overwrite: bool
     logger: Optional[Callable[[str], None]] = None
-
-
-def script_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
-
-
-def default_path(names: Sequence[str]) -> Path:
-    here = script_dir()
-    for name in names:
-        candidates = [
-            here / name,
-            here / "python" / name,
-            here / "resources" / name,
-            here / "resources" / "python" / name,
-            here.parent / "python" / name,
-            here.parent / "resources" / "python" / name,
-            here.parent / "resources" / name,
-            here.parent.parent / "python" / name,
-            here.parent.parent / "resources" / "python" / name,
-            Path.cwd() / name,
-            Path.cwd() / "python" / name,
-            Path.cwd() / "resources" / "python" / name,
-        ]
-        if getattr(sys, "_MEIPASS", None):
-            meipass = Path(sys._MEIPASS)
-            candidates = [
-                meipass / name,
-                meipass / "python" / name,
-                meipass / "resources" / name,
-                meipass / "resources" / "python" / name,
-            ] + candidates
-            
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
-    return here / names[0]
 
 
 def load_items(path: Path) -> List[Item]:
@@ -352,25 +315,14 @@ def apply_name_pairs(upk, package, pairs: Sequence[Tuple[str, str]], preserve_he
 def load_provider(upk, keys_path: Optional[Path], donor_path: Path, script_path: Path):
     if keys_path and keys_path.exists():
         return upk.DecryptionProvider(str(keys_path)), keys_path
-    found = upk.find_keys_path(script_path, donor_path) if hasattr(upk, "find_keys_path") else None
-    if found:
-        return upk.DecryptionProvider(str(found)), Path(found)
+    fallback = load_settings().keys_path
+    if fallback.exists():
+        return upk.DecryptionProvider(str(fallback)), fallback
     return None, None
 
 
 def resolve_with_optional_keys(upk, input_path: Path, temp_dir: Path, keys_path: Optional[Path]):
-    if not keys_path:
-        return upk.resolve_input_package(input_path, temp_dir, script_dir())
-    old_find = getattr(upk, "find_keys_path", None)
-    if old_find is None:
-        return upk.resolve_input_package(input_path, temp_dir, script_dir())
-    def forced(_script_dir, _selected_file):
-        return keys_path
-    upk.find_keys_path = forced
-    try:
-        return upk.resolve_input_package(input_path, temp_dir, script_dir())
-    finally:
-        upk.find_keys_path = old_find
+    return upk.resolve_input_package(input_path, temp_dir, keys_path)
 
 
 def summary_line(package) -> str:
@@ -485,7 +437,7 @@ def _load_keys_map() -> dict:
     if _keys_map is not None:
         return _keys_map
     try:
-        map_path = _keys_map_path or default_path(("keys_map.json",))
+        map_path = _keys_map_path or load_settings().keys_map_path
         if map_path.exists():
             import json
             _keys_map = json.loads(map_path.read_text(encoding="utf-8"))
@@ -780,7 +732,7 @@ def swap_one_package(
     if donor_key is None:
         raise ValueError(
             f"No AES key found for {source_path.name}. "
-            f"Ensure keys_map.json is present next to the script.")
+            f"Ensure keys_map.json is present at {load_settings().keys_map_path}.")
     log.append(f"Donor key: found")
 
     # ── Decrypt, rename, re-encrypt ───────────────────────────────────────────
@@ -868,49 +820,6 @@ def build_output(upk, donor_path: Path, target_key_path: Path, modified, provide
     else:
         output_path.write_bytes(modified.file_bytes)
         log.append("Saved decrypted/decompressed output because input was not encrypted.")
-
-
-def swap_one_package(upk, source_path: Path, output_path: Path, key_source_path: Path, pairs: Sequence[Tuple[str, str]], options: SwapOptions) -> Tuple[Path, List[str]]:
-    log: List[str] = []
-    cleanup_old_temp_files(options.output_dir, options.logger)
-    if not source_path.exists():
-        raise FileNotFoundError(f"Source package not found: {source_path}")
-    if output_path.exists() and not options.overwrite:
-        raise FileExistsError(f"Output already exists: {output_path}")
-
-    temp_dir = options.work_dir / "AssetSwapper_Decrypted"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
-    log.append(f"Input source:        {source_path}")
-    log.append(f"Output target:       {output_path}")
-    log.append(f"Key source target:   {key_source_path}")
-
-    resolved_path, package, provider, actual_keys_path, was_encrypted = resolve_with_optional_keys(upk, source_path, temp_dir, options.keys_path)
-    log.append(f"Resolved package:    {resolved_path}")
-    if actual_keys_path:
-        log.append(f"Keys file:           {actual_keys_path}")
-    log.append(f"Original offsets:    {summary_line(package)}")
-
-    log.append("Name-table changes:")
-    for old, new in pairs:
-        log.append(f"  {old!r} -> {new!r}")
-
-    modified, rename_log = apply_name_pairs(upk, package, pairs, options.preserve_header_offsets)
-    log.extend(rename_log)
-    log.append(f"Modified offsets:    {summary_line(modified)}")
-
-    backup_path = output_path.with_suffix(output_path.suffix + ".bak")
-    if backup_path.exists():
-        raise RuntimeError(
-            f"{output_path.name} is already swapped — restore it first before swapping again."
-        )
-
-    if output_path.exists() and options.overwrite:
-        shutil.copy2(output_path, backup_path)
-        log.append(f"Backup written:      {backup_path}")
-
-    build_output(upk, source_path, key_source_path, modified, provider, output_path, was_encrypted, log)
-    return output_path, log
 
 
 def swap_asset(upk, target: Item, donor: Item, options: SwapOptions) -> Tuple[List[Path], List[str]]:
@@ -1392,9 +1301,10 @@ def swap_pfp_from_png(upk, png_path: Path, options: SwapOptions) -> Tuple[List[P
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser()
-    p.add_argument("--items", type=Path, default=default_path(("items.json", "items(4).json")))
-    p.add_argument("--keys", type=Path, default=None)
-    p.add_argument("--keys-map", type=Path, default=None)
+    settings = load_settings()
+    p.add_argument("--items", type=Path, default=settings.items_path)
+    p.add_argument("--keys", type=Path, default=settings.keys_path)
+    p.add_argument("--keys-map", type=Path, default=settings.keys_map_path)
     p.add_argument("--work-dir", type=Path, default=None, help="Directory for temporary working files")
     p.add_argument("--donor-dir", "--upk-dir", "--input-dir", dest="donor_dir", type=Path, default=None)
     p.add_argument("--output-dir", "--out-dir", dest="output_dir", type=Path, default=None)
@@ -1488,7 +1398,7 @@ def cli_run(args: argparse.Namespace) -> int:
 
     # Reset cached key map per invocation and respect explicit map path when provided.
     _keys_map = None
-    _keys_map_path = args.keys_map
+    _keys_map_path = args.keys_map or load_settings().keys_map_path
 
     is_pfp_mode = bool(args.custom_pfp or getattr(args, 'pfp_png', None))
 
@@ -1506,22 +1416,7 @@ def cli_run(args: argparse.Namespace) -> int:
     if not is_pfp_mode and not args.revert and (not args.target or not args.donor):
         raise SystemExit("--target and --donor are required")
 
-    keys = args.keys
-    if keys is None:
-        here = script_dir()
-        candidates = [
-            here / "keys.txt",
-            here / "keys(1).txt",
-            here.parent / "python" / "keys.txt",
-            here.parent / "python" / "keys(1).txt",
-            Path.cwd() / "keys.txt",
-            Path.cwd() / "python" / "keys.txt",
-            args.donor_dir / "keys.txt" if args.donor_dir else None,
-        ]
-        for candidate in candidates:
-            if candidate is not None and candidate.exists():
-                keys = candidate
-                break
+    keys = args.keys or load_settings().keys_path
 
     options = SwapOptions(
         items_path=args.items,

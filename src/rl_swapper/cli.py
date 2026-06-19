@@ -33,7 +33,7 @@ def main() -> int:
     parser.add_argument("--donor-thumb", default="", help="Override donor thumbnail filename")
     args = parser.parse_args()
 
-    ensure_workspace(settings.items_path, settings.swapper_path, runs_dir)
+    ensure_workspace(settings.items_path, settings.swapper_path, runs_dir) # TODO remove ensure_workspace everywhere since files are always there
 
     items = load_items(settings.items_path)
     target_name = normalize_name(args.target)
