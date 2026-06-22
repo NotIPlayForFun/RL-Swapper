@@ -5,7 +5,7 @@ a = Analysis(
     ['src\\rl_swapper\\gui\\interface.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/rl_swapper/resources', 'resources')],
+    datas=[('src/rl_swapper/data', 'data')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

@@ -6,10 +6,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from rl_swapper.backend.upk_swap import (
-    ensure_workspace,
-    infer_thumbnail_name,
-    normalize_name,
+from rl_swapper.backend.swap_orchestration.swap_orchestration import (
+    initiate_backend,
+    _infer_thumbnail_name,
+    _normalize_name,
     prepare_swap,
 )
 from rl_swapper.backend.item_catalog import find_item_by_filename, load_items
@@ -17,8 +17,8 @@ from rl_swapper import config
 
 def main() -> int:
     settings = config.load_settings()
-    runs_dir = Path(settings.runs_dir)
-    config.setup_logging(runs_dir)
+    swap_workspaces_dir = Path(settings.workspaces_dir)
+    config.setup_logging(swap_workspaces_dir)
     
     parser = argparse.ArgumentParser(description="Stage a Rocket League UPK swap from filenames")
     parser.add_argument("donor", help="Donor UPK filename to copy the visual data from")
@@ -33,13 +33,13 @@ def main() -> int:
     parser.add_argument("--donor-thumb", default="", help="Override donor thumbnail filename")
     args = parser.parse_args()
 
-    ensure_workspace(settings.items_path, settings.swapper_path, runs_dir)
+    initiate_backend(settings.items_path, settings.swapper_path, swap_workspaces_dir) # TODO remove ensure_workspace everywhere since files are always there
 
     items = load_items(settings.items_path)
-    target_name = normalize_name(args.target)
-    donor_name = normalize_name(args.donor)
-    target_thumb_name = normalize_name(args.target_thumb) if args.target_thumb else infer_thumbnail_name(target_name)
-    donor_thumb_name = normalize_name(args.donor_thumb) if args.donor_thumb else infer_thumbnail_name(donor_name)
+    target_name = _normalize_name(args.target)
+    donor_name = _normalize_name(args.donor)
+    target_thumb_name = _normalize_name(args.target_thumb) if args.target_thumb else _infer_thumbnail_name(target_name)
+    donor_thumb_name = _normalize_name(args.donor_thumb) if args.donor_thumb else _infer_thumbnail_name(donor_name)
 
     target_item = find_item_by_filename(target_name, items)
     donor_item = find_item_by_filename(donor_name, items)
@@ -52,8 +52,8 @@ def main() -> int:
         keys_path=settings.keys_path,
         keys_map_path=settings.keys_map_path,
         source_dir=args.source_dir,
-        runs_dir=runs_dir,
-        work_dir=settings.work_path,
+        workspaces_dir=swap_workspaces_dir,
+        work_dir=settings.decryption_work_path,
         with_thumbnails=args.with_thumbnails,
         target_comment=args.target_comment,
         donor_comment=args.donor_comment,

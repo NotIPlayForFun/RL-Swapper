@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from tkinter import BOTH, RIGHT, LEFT, Y, X, Canvas, Frame, Label
 from tkinter import ttk
-
-import rl_swapper.backend.upk_swap as backend
+import rl_swapper.backend.models as backend
 
 CARD = "#171d2b"
 CARD_SELECTED = "#20283a"
@@ -25,7 +24,7 @@ REVERT_ICON = "↩"
 
 
 def swap_border_color(swap: backend.SwapRecord) -> str:
-    return GREEN if swap.pushed else ORANGE
+    return GREEN if swap.is_pushed() else ORANGE
 
 def format_human_timestamp(value: str) -> str:
     if not value:
@@ -179,8 +178,8 @@ class SwapCard(Frame):
         header_row = Frame(self.inner, bg=self.inner["bg"])
         header_row.pack(fill=X)
 
-        status_text = "Pushed" if self.swap.pushed else "Prepared"
-        status_bg = GREEN if self.swap.pushed else ORANGE
+        status_text = "Pushed" if self.swap.is_pushed() else "Prepared"
+        status_bg = GREEN if self.swap.is_pushed() else ORANGE
         status = Label(
             header_row,
             text=status_text,
@@ -192,7 +191,7 @@ class SwapCard(Frame):
         )
         status.pack(side=LEFT)
 
-        if not self.swap.pushed:
+        if not self.swap.is_pushed():
             ttk.Button(
                 header_row,
                 text=DELETE_ICON,
@@ -271,14 +270,14 @@ class SwapCard(Frame):
             font=("Segoe UI", 10),
         ).pack(anchor="w", pady=(4, 0))
 
-        button_style = "PushedAccent.TButton" if self.swap.pushed else "PendingAccent.TButton"
+        button_style = "PushedAccent.TButton" if self.swap.is_pushed() else "PendingAccent.TButton"
         action_row = Frame(content_row, bg=self.inner["bg"])
         action_row.grid(row=0, column=1, sticky="se", padx=(12, 0))
 
         button_cluster = Frame(action_row, bg=self.inner["bg"])
         button_cluster.pack(side=RIGHT)
 
-        if self.swap.pushed:
+        if self.swap.is_pushed():
             ttk.Button(button_cluster, text=OPEN_FOLDER_ICON, style="Ghost.TButton", width=3, takefocus=False, command=lambda: self._on_open(self.swap)).pack(side=RIGHT)
             ttk.Button(button_cluster, text=f"{PUSH_ICON} Push Swap", style=button_style, takefocus=False, command=lambda: self._on_push(self.swap)).pack(side=RIGHT, padx=(0, 10))
             ttk.Button(button_cluster, text=f"{REVERT_ICON} Revert Push", style="RevertAccent.TButton", takefocus=False, command=lambda: self._on_revert(self.swap)).pack(side=RIGHT, padx=(0, 10))

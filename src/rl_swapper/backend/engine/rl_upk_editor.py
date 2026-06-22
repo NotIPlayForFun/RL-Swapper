@@ -19,6 +19,7 @@ import zipfile
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Tuple
 
+from ...config import load_settings
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -1925,7 +1926,7 @@ def try_parse_plain_package(input_path: Path) -> Optional["ParsedPackage"]:
         return None
 
 
-def resolve_input_package(input_path: Path, decrypted_dir: Path, script_dir: Path) -> Tuple[Path, "ParsedPackage", Optional[DecryptionProvider], Optional[Path], bool]:
+def resolve_input_package(input_path: Path, decrypted_dir: Path, keys_path: Optional[Path] = None) -> Tuple[Path, "ParsedPackage", Optional[DecryptionProvider], Optional[Path], bool]:
     plain_package = try_parse_plain_package(input_path)
     if plain_package is not None:
         return input_path, plain_package, None, None, False
@@ -1941,9 +1942,10 @@ def resolve_input_package(input_path: Path, decrypted_dir: Path, script_dir: Pat
         except Exception:
             pass
 
-    keys_path = find_keys_path(script_dir, input_path)
     if keys_path is None:
-        raise FileNotFoundError("Could not find keys.txt next to the script, current directory, or selected file")
+        keys_path = load_settings().keys_path
+    if not keys_path.exists():
+        raise FileNotFoundError(f"Missing keys.txt at {keys_path}")
     provider = DecryptionProvider(str(keys_path))
     decrypted_path = decrypted_dir / f"{input_path.stem}_decrypted.upk"
     unpack_package(str(input_path), str(decrypted_path), provider)
@@ -2035,21 +2037,6 @@ def parse_decrypted_package_bytes(file_path: Path, data: bytes) -> ParsedPackage
     bio.seek(summary.export_offset)
     exports = [parse_export_entry(r, i, len(summary.generations), summary) for i in range(summary.export_count)]
     return ParsedPackage(file_path=file_path, summary=summary, names=names, imports=imports, exports=exports, file_bytes=data)
-
-
-def find_keys_path(script_dir: Path, selected_file: Path) -> Optional[Path]:
-    candidates = [
-        script_dir / "keys.txt",
-        Path.cwd() / "keys.txt",
-        selected_file.parent / "keys.txt",
-    ]
-    if getattr(sys, "_MEIPASS", None):
-        candidates.insert(0, Path(sys._MEIPASS) / "keys.txt")
-        
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
 
 
 def format_hex_preview(data: bytes, base_offset: int = 0) -> str:
