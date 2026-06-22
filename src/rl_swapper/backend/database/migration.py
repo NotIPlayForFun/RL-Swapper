@@ -1,3 +1,53 @@
+
+
+
+
+
+
+# DO NOT USE WITHOUT READING!!!
+# --------------------------------- IMPORTANT NOTE ---------------------------------
+# --------------------------------- IMPORTANT NOTE ---------------------------------
+# --------------------------------- IMPORTANT NOTE ---------------------------------
+# DO NOT USE WITHOUT READING!!!
+# 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# 
+# DO NOT USE WITHOUT READING!!!
+#
+# This is not functional. It ran once correctly, but has AT LEAST the following problems:
+#
+# - It ports the legacy swap.json manifest and comments.txt
+# - Doesn't utilize the filesystem.py, which means any changes to filesystem handling are not reflected here
+#
+# - Doesn't check for whether a swap was already migrated correctly. It checks whether it exists in db,
+# but of course the newly created SwapRecord has its own new uuid, meaning it
+# 
+# >!>>>!>>>> WILL KEEP MIGRATING ALL LEGACY SWAPS TO NEW DB AND FS UUID ENTITIES EVERYTIME IT IS RUN<<<<<<<<<<
+#
+# - The above could be solved by adding a legacy_id to the new workspace folder of a swap, but
+# I don't care since I'm the only person that needed to run it, I ran it only once, manually cleaned up the
+# legacy swap.json and comments.txt, and will never run it again.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 from contextlib import closing
 import json
 import logging
@@ -104,11 +154,42 @@ def load_legacy_swap(manifest_path: Path) -> Optional[SwapRecord]:
         elif "pushed" in data:
             data.pop("pushed")
         
+        if data["status"] == "pushed" and not data.get("pushed_at"):
+            logger.warning(f"Legacy swap manifest at {manifest_path} has status 'pushed' but missing 'pushed_at' timestamp. Setting 'pushed_at' to None.")
+            raise ValueError(f"Legacy swap manifest at {manifest_path} has status 'pushed' but missing 'pushed_at' timestamp. Setting 'pushed_at' to None.")
+        
+        if not data["created_at"] or not isinstance(data["created_at"], str):
+            logger.warning(f"Legacy swap manifest at {manifest_path} has null 'created_at' timestamp. This field is required in the new system. Cannot migrate this swap.")
+            raise ValueError(f"Legacy swap manifest at {manifest_path} has null 'created_at' timestamp. This field is required in the new system. Cannot migrate this swap.")
+        
         # Normalize empty string pushed_at to None
         if data.get("pushed_at") == "":
             data["pushed_at"] = None
         
-        return SwapRecord(**data)
+        return SwapRecord(
+            target_name=data["target_name"],
+            donor_name=data["donor_name"],
+            target_id=data["target_id"],
+            donor_id=data["donor_id"],
+            target_product=data["target_product"],
+            donor_product=data["donor_product"],
+            target_quality=data["target_quality"],
+            donor_quality=data["donor_quality"],
+            target_slot=data["target_slot"],
+            donor_slot=data["donor_slot"],
+            target_unlock_method=data["target_unlock_method"],
+            donor_unlock_method=data["donor_unlock_method"],
+            target_asset_package=data["target_asset_package"],
+            donor_asset_package=data["donor_asset_package"],
+            target_asset_path=data["target_asset_path"],
+            donor_asset_path=data["donor_asset_path"],
+            with_thumbnails=data["with_thumbnails"],
+            target_thumb_name=data.get("target_thumb_name"),
+            donor_thumb_name=data.get("donor_thumb_name"),
+            status=data["status"],
+            pushed_at=data.get("pushed_at"),
+            created_at=data.get("created_at")
+        )
     except (KeyError, TypeError, ValueError) as e:
         logger.warning(f"Failed to create SwapRecord from {manifest_path}: {e}")
         raise e

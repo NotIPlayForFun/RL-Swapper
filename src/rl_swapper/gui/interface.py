@@ -17,6 +17,7 @@ from datetime import datetime
 import rl_swapper.backend.swap_orchestration.swap_orchestration as backend
 from rl_swapper import config
 from rl_swapper.gui.ui_components import ScrollableFrame, SwapCard, swap_border_color, format_human_timestamp
+from rl_swapper.backend.swap_orchestration.models import SwapWorkspacePaths
 from tkinter import BOTH, END, LEFT, RIGHT, X, Y, BooleanVar, Canvas, Entry, Frame, Label, StringVar, Tk, TclError, Text, Toplevel, messagebox
 from tkinter import ttk
 from pathlib import Path
@@ -91,7 +92,7 @@ def format_swap_details(swap: backend.SwapRecord | None) -> str:
         return "Select a swap from the overview to inspect it."
     return "\n".join(
         [
-            f"Run: {swap.run_name}",
+            f"Run: {swap.id}", # TODO run is deprecated, using id (uuid of database record) for now
             f"Status: {'Pushed' if swap.is_pushed() else 'Prepared, not pushed'}", 
             f"Created: {swap.created_at}",
             f"Pushed at: {swap.pushed_at or '(not pushed)'}",
@@ -118,9 +119,8 @@ def format_swap_details(swap: backend.SwapRecord | None) -> str:
 class SwapManagerApp:
     def __init__(self, root: Tk) -> None:
         self.settings = config.load_settings()
-        self.workspaces_dir = Path(self.settings.workspaces_dir)
         config.setup_logging()
-        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path, self.workspaces_dir)
+        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path)
         self.root = root
         self.root.title("RL Swap Dashboard")
         self.root.geometry("1480x860")
@@ -373,15 +373,14 @@ class SwapManagerApp:
         self._set_item_text(self.item_detail_text, "Select an item from the list.")
 
     def refresh_overview(self, select_run_name: str | None = None) -> None:
-        self.swaps = backend.list_swaps(self.workspaces_dir)
+        self.swaps = backend.list_swaps()
         print(f"Loaded {len(self.swaps)} swaps from disk")
-        print(f"runs_dir: {self.workspaces_dir}")
         query = self.swap_search_var.get().strip().lower()
         if query:
             self.swaps = [
                 swap
                 for swap in self.swaps
-                if query in swap.run_name.lower()
+                if query in swap.id.lower()
                 or query in swap.target_product.lower()
                 or query in swap.donor_product.lower()
                 or query in (swap.target_slot or "").lower()
@@ -390,10 +389,10 @@ class SwapManagerApp:
             ]
         if select_run_name is not None:
             for swap in self.swaps:
-                if swap.run_name == select_run_name:
+                if swap.id == select_run_name:
                     self.selected_swap = swap
                     break
-        if self.selected_swap is not None and all(swap.run_name != self.selected_swap.run_name for swap in self.swaps):
+        if self.selected_swap is not None and all(swap.id != self.selected_swap.id for swap in self.swaps):
             self.selected_swap = None
 
         for child in self.cards_scroll.content.winfo_children():
@@ -449,7 +448,7 @@ class SwapManagerApp:
 
     def show_swap_details_popup(self, swap: backend.SwapRecord) -> None:
         popup = Toplevel(self.root)
-        popup.title(f"Swap Details - {swap.run_name}")
+        popup.title(f"Swap Details - {swap.id}")
         popup.configure(bg=BG)
         popup.transient(self.root)
         popup.grab_set()
@@ -459,7 +458,7 @@ class SwapManagerApp:
         outer.pack(fill=BOTH, expand=True)
 
         Label(outer, text="Swap details", bg=BG, fg=TEXT, font=("Segoe UI Semibold", 15)).pack(anchor="w")
-        Label(outer, text=swap.run_name, bg=BG, fg=MUTED).pack(anchor="w", pady=(2, 12))
+        Label(outer, text=swap.id, bg=BG, fg=MUTED).pack(anchor="w", pady=(2, 12))
 
         details = Text(
             outer,
@@ -738,10 +737,10 @@ class SwapManagerApp:
         if swap.is_pushed():
             messagebox.showinfo("Swap pushed", "Only prepared swaps can be deleted.")
             return
-        if not messagebox.askyesno("Delete prepared swap", f"Delete the prepared swap run '{swap.run_name}'? This removes the local swap files."):
+        if not messagebox.askyesno("Delete prepared swap", f"Delete the prepared swap run '{swap.id}'? This removes the local swap files."):
             return
         backend.delete_swap(swap)
-        if self.selected_swap is not None and self.selected_swap.run_name == swap.run_name:
+        if self.selected_swap is not None and self.selected_swap.id == swap.id:
             self.selected_swap = None
         self.refresh_overview()
 
@@ -763,59 +762,67 @@ class SwapManagerApp:
         try:
             rl_source_dir = Path(self.settings.rl_source_dir)
             swap = backend.prepare_swap(
-                self.selected_donor,
-                self.selected_target,
-                swapper_path=self.settings.swapper_path,
-                items_path=self.settings.items_path,
-                keys_path=self.settings.keys_path,
-                keys_map_path=self.settings.keys_map_path,
-                source_dir=rl_source_dir,
-                workspaces_dir=self.workspaces_dir,
-                work_dir=self.settings.decryption_work_path,
+                donor=self.selected_donor,
+                target=self.selected_target,
                 with_thumbnails=self.include_thumbnails_var.get(),
             )
+            #     self.selected_donor,
+            #     self.selected_target,
+            #     swapper_path=self.settings.swapper_path,
+            #     items_path=self.settings.items_path,
+            #     keys_path=self.settings.keys_path,
+            #     keys_map_path=self.settings.keys_map_path,
+            #     source_dir=rl_source_dir,
+            #     workspaces_dir=self.workspaces_dir,
+            #     work_dir=self.settings.decryption_work_path,
+            #     with_thumbnails=self.include_thumbnails_var.get(),
+            # )
         except SystemExit as exc:
             messagebox.showerror("Prepare failed", str(exc))
             return
-        self.status_var.set(f"Prepared {swap.run_name}")
+        # TODO ensure that swap=None case is handled correctly, since we must assume
+        # that it can happen if swap fails with a bug.
+        if swap is None:
+            self.status_var.set("Swap preparation failed")
+            return
+        else:
+            self.status_var.set(f"Prepared {swap.id}")
         self.selected_swap = swap
         self.show_overview()
-        self.refresh_overview(select_run_name=swap.run_name)
-        messagebox.showinfo("Swap prepared", f"Prepared swap:\n{swap.run_name}")
+        self.refresh_overview(select_run_name=swap.id)
+        messagebox.showinfo("Swap prepared", f"Prepared swap:\n{swap.id}")
 
     def confirm_push_swap(self, swap: backend.SwapRecord) -> None:
-        if not messagebox.askyesno("Confirm push", f"Mark '{swap.run_name}' as pushed?\n\nThis will copy the prepared files into the live RL folder and update the saved swap state."):
+        if not messagebox.askyesno("Confirm push", f"Mark '{swap.id}' as pushed?\n\nThis will copy the prepared files into the live RL folder and update the saved swap state."):
             return
         try:
-            rl_source_dir = Path(self.settings.rl_source_dir)
-            updated = backend.push_swap(swap, rl_source_dir)
+            updated = backend.push_swap(swap=swap)
         except SystemExit as exc:
             messagebox.showerror("Push failed", str(exc))
             return
         self.selected_swap = updated
-        self.refresh_overview(select_run_name=updated.run_name)
+        self.refresh_overview(select_run_name=updated.id)
         messagebox.showinfo("Swap pushed", f"Marked as pushed:\n{updated.target_name}")
 
     def confirm_revert_swap(self, swap: backend.SwapRecord) -> None:
-        if not messagebox.askyesno("Confirm revert", f"Revert '{swap.run_name}' back to not pushed?\n\nThis will restore the original target from backup into the live RL folder and update the saved swap state."):
+        if not messagebox.askyesno("Confirm revert", f"Revert '{swap.id}' back to not pushed?\n\nThis will restore the original target from backup into the live RL folder and update the saved swap state."):
             return
         try:
-            rl_source_dir = Path(self.settings.rl_source_dir)
-            updated = backend.revert_swap(swap, rl_source_dir)
+            updated = backend.revert_swap(swap)
         except SystemExit as exc:
             messagebox.showerror("Revert failed", str(exc))
             return
         self.selected_swap = updated
-        self.refresh_overview(select_run_name=updated.run_name)
+        self.refresh_overview(select_run_name=updated.id)
         messagebox.showinfo("Swap reverted", f"Marked as not pushed:\n{updated.target_name}")
 
     def open_swap_folder(self, swap: backend.SwapRecord) -> None:
-        path = Path(swap.run_dir)
+        paths = SwapWorkspacePaths.from_swap_record(swap)
         try:
-            if not path.exists():
-                messagebox.showerror("Open failed", f"Swap folder not found:\n{path}")
+            if not paths.workspace_dir.exists():
+                messagebox.showerror("Open failed", f"Swap folder not found:\n{paths.workspace_dir}")
                 return
-            os.startfile(str(path))
+            os.startfile(str(paths.workspace_dir))
         except Exception as exc:
             messagebox.showerror("Open failed", str(exc))
 

@@ -41,7 +41,7 @@ class AppSettings:
     shipped_data_dir: str = str(SHIPPED_DATA_DIR)
     decryption_work_dir: str = DEFAULT_DECRYPTION_WORK_DIR # for decrypted files, used by rl_asset_swapper.py
     workspaces_dir: str = str(USER_DATA_DIR / "workspaces")
-    legacy_runs_dir: str = str(USER_DATA_DIR / "runs") # TODO remove
+    legacy_runs_dir: str = str(USER_DATA_DIR / "swap_runs") # TODO remove
     db_file: str = str(SWAPS_DB_FILE)
     
     @property

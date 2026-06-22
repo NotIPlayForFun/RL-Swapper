@@ -92,6 +92,35 @@ def stage_workspace_from_source(swap: SwapRecord) -> None:
     
     return
 
+def push_swap_output_to_rl_source(swap: SwapRecord) -> None:
+    """Copy swapped target and target-thumbnail (if present) 
+    files from workspace output directory into rl source directory, 
+    overwriting existing source files."""
+    paths = SwapWorkspacePaths.from_swap_record(swap)
+    
+    output_target_path = paths.output_dir / swap.target_asset_package
+    rl_source_target_path = load_settings().rl_source_dir_path / swap.target_asset_package
+    if swap.with_thumbnails and swap.target_thumb_name:
+        output_thumb_path = paths.output_dir / swap.target_thumb_name
+        rl_source_thumb_path = load_settings().rl_source_dir_path / swap.target_thumb_name
+    else    :
+        output_thumb_path = None
+        rl_source_thumb_path = None
+
+    if not output_target_path.exists():
+        logger.warning(f"Output target file does not exist at expected path {output_target_path}. Cannot push swap output to rl source.")
+        raise FileNotFoundError(f"Output target file does not exist at expected path {output_target_path}. Cannot push swap output to rl source.")
+    
+    try:
+        shutil.copy2(output_target_path, rl_source_target_path)
+        logger.info(f"Successfully pushed swap output to rl source for swap.id={swap.id} at path {rl_source_target_path}.")
+        if output_thumb_path and rl_source_thumb_path:
+            shutil.copy2(output_thumb_path, rl_source_thumb_path)
+            logger.info(f"Successfully pushed swap output thumbnail to rl source for swap.id={swap.id} at path {rl_source_thumb_path}.")
+    except Exception as e:
+        logger.error(f"Failed to push swap output for swap.id={swap.id} to rl source folder at {rl_source_target_path}: {e}")
+        raise e
+
 ################################################################################
 # TODO
 # - first, move orchestration functions from legacy to new structure, using fs functions (that we will implement next) to handle the filesystem changes that need to happen in each step, and db functions to handle the db changes. This way we can keep all the logic for what needs to happen in each step in the orchestration layer, while keeping the actual implementation of how it happens in the fs and db layers.

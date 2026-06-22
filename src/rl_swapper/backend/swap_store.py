@@ -14,6 +14,11 @@ import uuid
 from rl_swapper import config
 from rl_swapper.backend.item_catalog import CatalogItem
 
+# TODO consider if this is the best place for this helper
+# helper to get a current iso timestamp string, since it's used in multiple places
+def current_timestamp_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
 # base class containing swap data
 # TODO move to models.py
 @dataclass(frozen=True)
@@ -47,7 +52,7 @@ class SwapRecord:
     """filename.upk of the donor thumbnail, if applicable"""
     # pushed: bool
     status: Literal["prepared", "pushed", "reverted", "deleted"]
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    created_at: str = field(default_factory=current_timestamp_iso)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     pushed_at: str | None = None
     
