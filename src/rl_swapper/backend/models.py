@@ -120,5 +120,5 @@ class SwapWorkspacePaths:
             # But not necessarily a good idea
             source_dir=workspace_dir / "source",
             output_dir=workspace_dir / "output",
-            backup_dir=workspace_dir / "backup",
+            backup_dir=workspace_dir / "source_backup",
         )

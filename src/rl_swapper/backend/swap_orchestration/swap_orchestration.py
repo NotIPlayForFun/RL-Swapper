@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # TODO the backend should ensure that initiate_backend has been called within the context, 
 # f.e. through a context manager or global state variable
-def initiate_backend(items_path: Path, swapper_path: Path) -> None:
+def initiate_backend(items_path: Path) -> None:
     """Validate that required UPK tools dependencies exist and create the workspaces folder.
 
     Exits the process with an error message if the item catalog or the swapper
@@ -45,8 +45,8 @@ def initiate_backend(items_path: Path, swapper_path: Path) -> None:
     """
     if not items_path.exists():
         raise SystemExit(f"Missing items.json at {items_path}")
-    if not swapper_path.exists():
-        raise SystemExit(f"Missing rl_asset_swapper.py at {swapper_path}")
+    # if not swapper_path.exists():
+    #     raise SystemExit(f"Missing rl_asset_swapper.py at {swapper_path}")
     # workspaces_dir.mkdir(parents=True, exist_ok=True)
     
     # legacy database migration to new db/fs structure

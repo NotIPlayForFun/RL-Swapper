@@ -128,7 +128,7 @@ class SwapManagerApp:
     def __init__(self, root: Tk) -> None:
         self.settings = config.load_settings()
         config.setup_logging()
-        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path)
+        backend.initiate_backend(self.settings.items_path)
         self.root = root
         self.root.title("RL Swap Dashboard")
         self.root.geometry("1480x860")

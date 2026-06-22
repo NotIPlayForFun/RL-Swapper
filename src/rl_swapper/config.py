@@ -72,9 +72,11 @@ class AppSettings:
     def keys_map_path(self) -> Path:
         return Path(self.shipped_data_dir) / "keys_map.json"
 
-    @property
-    def swapper_path(self) -> Path:
-        return APP_DIR / "backend" / "engine" / "rl_asset_swapper.py"
+    # Doesn't work anymore since the .py file is no longer included 
+    # in the data/ folder which is given to pyinstaller to include as datas
+    # @property
+    # def swapper_path(self) -> Path:
+    #     return APP_DIR / "backend" / "engine" / "rl_asset_swapper.py"
 
     @property
     def decryption_work_path(self) -> Path:

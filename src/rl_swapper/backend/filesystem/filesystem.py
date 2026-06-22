@@ -17,6 +17,10 @@ def create_swap_workspace(swap: SwapRecord) -> SwapWorkspacePaths:
     paths.source_dir.mkdir(parents=True, exist_ok=True)
     paths.output_dir.mkdir(parents=True, exist_ok=True)
     paths.backup_dir.mkdir(parents=True, exist_ok=True)
+    (paths.source_dir / "target").mkdir(parents=True, exist_ok=True)
+    (paths.source_dir / "donor").mkdir(parents=True, exist_ok=True)
+    (paths.backup_dir / "target").mkdir(parents=True, exist_ok=True)
+    (paths.backup_dir / "donor").mkdir(parents=True, exist_ok=True)
     return paths
 
 def delete_swap_workspace(swap: SwapRecord) -> None:
@@ -37,7 +41,7 @@ def delete_swap_workspace(swap: SwapRecord) -> None:
         raise e
 
 def restore_target_from_backup(swap: SwapRecord) -> None:
-    backup_path = SwapWorkspacePaths.from_swap_record(swap).backup_dir / swap.target_asset_package
+    backup_path = SwapWorkspacePaths.from_swap_record(swap).backup_dir / "target" / swap.target_asset_package
     to_restore_path = load_settings().rl_source_dir_path / swap.target_asset_package
 
     if not backup_path.exists():
@@ -74,8 +78,8 @@ def stage_workspace_from_source(swap: SwapRecord) -> None:
     
     # copy target and donor source files into workspace source dir
     try:
-        shutil.copy2(load_settings().rl_source_dir_path / swap.target_asset_package, paths.source_dir / swap.target_asset_package)
-        shutil.copy2(load_settings().rl_source_dir_path / swap.donor_asset_package, paths.source_dir / swap.donor_asset_package)
+        shutil.copy2(load_settings().rl_source_dir_path / swap.target_asset_package, paths.source_dir / "target" / swap.target_asset_package)
+        shutil.copy2(load_settings().rl_source_dir_path / swap.donor_asset_package, paths.source_dir / "donor" / swap.donor_asset_package)
         logger.info(f"Successfully copied target and donor source files into workspace source directory for swap.id={swap.id}.")
     except Exception as e:
         logger.error(f"Failed to copy target and donor source files into workspace source directory for swap.id={swap.id}: {e}")
@@ -83,8 +87,8 @@ def stage_workspace_from_source(swap: SwapRecord) -> None:
     
     # create backup of target and donor source files in workspace backup dir
     try:
-        shutil.copy2(load_settings().rl_source_dir_path / swap.target_asset_package, paths.backup_dir / swap.target_asset_package)
-        shutil.copy2(load_settings().rl_source_dir_path / swap.donor_asset_package, paths.backup_dir / swap.donor_asset_package)
+        shutil.copy2(load_settings().rl_source_dir_path / swap.target_asset_package, paths.backup_dir / "target" / swap.target_asset_package)
+        shutil.copy2(load_settings().rl_source_dir_path / swap.donor_asset_package, paths.backup_dir / "donor" / swap.donor_asset_package)
         logger.info(f"Successfully created backup of target and donor source files in workspace backup directory for swap.id={swap.id}.")
     except Exception as e:
         logger.error(f"Failed to create backup of target and donor source files in workspace backup directory for swap.id={swap.id}: {e}")
@@ -98,10 +102,10 @@ def push_swap_output_to_rl_source(swap: SwapRecord) -> None:
     overwriting existing source files."""
     paths = SwapWorkspacePaths.from_swap_record(swap)
     
-    output_target_path = paths.output_dir / swap.target_asset_package
+    output_target_path = paths.output_dir / "target" / swap.target_asset_package
     rl_source_target_path = load_settings().rl_source_dir_path / swap.target_asset_package
     if swap.with_thumbnails and swap.target_thumb_name:
-        output_thumb_path = paths.output_dir / swap.target_thumb_name
+        output_thumb_path = paths.output_dir / "target" / swap.target_thumb_name
         rl_source_thumb_path = load_settings().rl_source_dir_path / swap.target_thumb_name
     else    :
         output_thumb_path = None

@@ -1,5 +1,10 @@
 (DEV) Compile with PyInstaller:
+optional: --noconfirm
 ...\rl_swapper> pyinstaller rl-swapper.spec --clean
+
+(DEV) Compile with PyInstaller (DEBUG):
+set console=True, debug=True in rl-swapper.spec
+...\rl_swapper> pyinstaller rl-swapper.spec --clean --log-level DEBUG
 
 (DEV) Run GUI:
 ...\rl_swapper> rl-swapper-gui
