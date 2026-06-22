@@ -1,3 +1,15 @@
+## Warning: still in beta (until soon...)
+
+Since I originally created this on a whim using mostly copilot for my own use before deciding it's a project worth actually pursuing, 
+this current version, apart from having terrible code design, is rudamentary and also contains soon to be fixed known bugs, most notably:
+- Swaps are always pushed with thumbnail-swaps included, which causes fewer swaps to work than otherwise
+
+I'm currently overhauling the entire codebase to bring it up to any actual standard on [full-backend-redesign](https://github.com/NotIPlayForFun/RL-Swapper/tree/full-backend-redesign)
+
+The next commit will contain the overhauled code and all major bugs fixed.
+
+<sup><sub>Let this be a lesson to never trust AI with anything that there is even a small chance you might want to pursure for any longer term. Turns out it still, for the most part, doesn't know how to code. I half debated starting anew rather than fixing this mess but sunk cost fallacy is real and here we are. Soon I'll be free from the torment...</sub></sup>
+
 # RL-Swapper: A Rocket League Skin Swapper
 
 <img width="700" alt="v0 1 0-add_new_swap_cropped" src="https://github.com/NotIPlayForFun/RL-Swapper/blob/main/resources/v0.1.0-Dashboard.png" />
