@@ -9,14 +9,28 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class ItemRecord:
+class CatalogItem:
+    """Item entry from the items catalog."""
     item_id: int
+    """item id"""
     asset_package: str
+    """filename.upk containing the item asset"""
     asset_path: str
+    """path to the asset within the UPK file"""
     product: str
+    """product name"""
     quality: str
+    """item quality"""
     slot: str
+    """item slot"""
     unlock_method: str
+    """method to unlock the item"""
+    
+    # make sure asset_package ends with .upk
+    def __post_init__(self):
+        if not self.asset_package.endswith(".upk"):
+            raise ValueError(f"asset_package must end with .upk, got {self.asset_package!r}")
+            
 
 
 def normalize_query(value: str) -> str:
@@ -27,10 +41,10 @@ def stem_matches(asset_package: str, file_name: str) -> bool:
     return Path(asset_package).name == Path(file_name).name
 
 
-def load_items(items_path: Path) -> list[ItemRecord]:
+def load_items(items_path: Path) -> list[CatalogItem]:
     data = json.loads(items_path.read_text(encoding="utf-8-sig"))
     rows = data.get("Items") or data.get("items") or []
-    items: list[ItemRecord] = []
+    items: list[CatalogItem] = []
     for row in rows:
         asset_package = str(row.get("AssetPackage") or row.get("asset_package") or "")
         if not asset_package:
@@ -40,7 +54,7 @@ def load_items(items_path: Path) -> list[ItemRecord]:
         except Exception:
             continue
         items.append(
-            ItemRecord(
+            CatalogItem(
                 item_id=item_id,
                 asset_package=asset_package,
                 asset_path=str(row.get("AssetPath") or row.get("asset_path") or ""),
@@ -53,7 +67,7 @@ def load_items(items_path: Path) -> list[ItemRecord]:
     return items
 
 
-def item_matches(item: ItemRecord, query: str) -> bool:
+def item_matches(item: CatalogItem, query: str) -> bool:
     if not query:
         return True
     haystacks = (
@@ -68,13 +82,13 @@ def item_matches(item: ItemRecord, query: str) -> bool:
     return any(query in str(haystack).lower() for haystack in haystacks)
 
 
-def search_items(items: list[ItemRecord], query: str) -> list[ItemRecord]:
+def search_items(items: list[CatalogItem], query: str) -> list[CatalogItem]:
     normalized = normalize_query(query)
     matches = [item for item in items if item_matches(item, normalized)]
     return sorted(matches, key=lambda item: (item.product.lower(), item.asset_package.lower(), item.item_id))
 
 
-def find_item_by_product(product: str, items: list[ItemRecord]) -> ItemRecord:
+def find_item_by_product(product: str, items: list[CatalogItem]) -> CatalogItem:
     normalized = normalize_query(product)
     exact_matches = [item for item in items if normalize_query(item.product) == normalized]
     if len(exact_matches) == 1:
@@ -89,7 +103,7 @@ def find_item_by_product(product: str, items: list[ItemRecord]) -> ItemRecord:
     raise SystemExit(f"No item found for product {product!r}")
 
 
-def find_item_id(file_name: str, items: list[ItemRecord]) -> int:
+def find_item_id(file_name: str, items: list[CatalogItem]) -> int:
     normalized = Path(file_name).name
     for item in items:
         if stem_matches(item.asset_package, normalized):
@@ -97,7 +111,7 @@ def find_item_id(file_name: str, items: list[ItemRecord]) -> int:
     raise SystemExit(f"No item database entry found for {file_name!r} in python/items.json")
 
 
-def find_item_by_filename(file_name: str, items: list[ItemRecord]) -> ItemRecord:
+def find_item_by_filename(file_name: str, items: list[CatalogItem]) -> CatalogItem:
     normalized = Path(file_name).name
     for item in items:
         if stem_matches(item.asset_package, normalized):

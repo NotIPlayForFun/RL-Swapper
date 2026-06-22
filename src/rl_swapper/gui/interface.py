@@ -14,7 +14,7 @@ import os
 import subprocess
 import shutil
 from datetime import datetime
-import rl_swapper.backend.upk_swap as backend
+import rl_swapper.backend.swap_orchestration.swap_orchestration as backend
 from rl_swapper import config
 from rl_swapper.gui.ui_components import ScrollableFrame, SwapCard, swap_border_color, format_human_timestamp
 from tkinter import BOTH, END, LEFT, RIGHT, X, Y, BooleanVar, Canvas, Entry, Frame, Label, StringVar, Tk, TclError, Text, Toplevel, messagebox
@@ -70,7 +70,7 @@ def swap_border_color(swap: backend.SwapRecord) -> str:
     return GREEN if swap.is_pushed() else ORANGE
 
 
-def format_item_details(item: backend.ItemRecord | None) -> str:
+def format_item_details(item: backend.CatalogItem | None) -> str:
     if item is None:
         return "Select an item to inspect its details."
     return "\n".join(
@@ -118,9 +118,9 @@ def format_swap_details(swap: backend.SwapRecord | None) -> str:
 class SwapManagerApp:
     def __init__(self, root: Tk) -> None:
         self.settings = config.load_settings()
-        self.runs_dir = Path(self.settings.runs_dir)
+        self.workspaces_dir = Path(self.settings.workspaces_dir)
         config.setup_logging()
-        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path, self.runs_dir)
+        backend.initiate_backend(self.settings.items_path, self.settings.swapper_path, self.workspaces_dir)
         self.root = root
         self.root.title("RL Swap Dashboard")
         self.root.geometry("1480x860")
@@ -131,15 +131,15 @@ class SwapManagerApp:
         self.filtered_items = list(self.items)
         self.swaps: list[backend.SwapRecord] = []
         self.selected_swap: backend.SwapRecord | None = None
-        self.selected_item: backend.ItemRecord | None = None
-        self.selected_donor: backend.ItemRecord | None = None
-        self.selected_target: backend.ItemRecord | None = None
+        self.selected_item: backend.CatalogItem | None = None
+        self.selected_donor: backend.CatalogItem | None = None
+        self.selected_target: backend.CatalogItem | None = None
         self.selected_item_tree_id: str | None = None
         self.swap_cards: list[SwapCard] = []
         self.item_sort_column = "Product"
         self.item_sort_reverse = False
         self.drag_start_index: int | None = None
-        self.drag_item: backend.ItemRecord | None = None
+        self.drag_item: backend.CatalogItem | None = None
         self.drag_label: Label | None = None
         self.selected_tree_item: str | None = None
         self.swap_search_var = StringVar(value="")
@@ -373,9 +373,9 @@ class SwapManagerApp:
         self._set_item_text(self.item_detail_text, "Select an item from the list.")
 
     def refresh_overview(self, select_run_name: str | None = None) -> None:
-        self.swaps = backend.list_swaps(self.runs_dir)
+        self.swaps = backend.list_swaps(self.workspaces_dir)
         print(f"Loaded {len(self.swaps)} swaps from disk")
-        print(f"runs_dir: {self.runs_dir}")
+        print(f"runs_dir: {self.workspaces_dir}")
         query = self.swap_search_var.get().strip().lower()
         if query:
             self.swaps = [
@@ -491,7 +491,7 @@ class SwapManagerApp:
         self._update_tree_styling()
         self.status_var.set(f"Found {len(self.filtered_items)} items")
 
-    def _current_item(self) -> backend.ItemRecord | None:
+    def _current_item(self) -> backend.CatalogItem | None:
         selection = self.item_tree.selection()
         if not selection:
             return None
@@ -624,7 +624,7 @@ class SwapManagerApp:
             self.drag_start_index = None
             self.drag_item = None
 
-    def _set_as_donor(self, item: backend.ItemRecord) -> None:
+    def _set_as_donor(self, item: backend.CatalogItem) -> None:
         """Set an item as the donor. Only swap if it's coming from target."""
         # If same item is already donor, do nothing
         if self.selected_donor and self.selected_donor.item_id == item.item_id:
@@ -651,7 +651,7 @@ class SwapManagerApp:
         self._update_tree_styling()
         self.status_var.set(f"Selected donor: {item.product}")
 
-    def _set_as_target(self, item: backend.ItemRecord) -> None:
+    def _set_as_target(self, item: backend.CatalogItem) -> None:
         """Set an item as the target. Only swap if it's coming from donor."""
         # If same item is already target, do nothing
         if self.selected_target and self.selected_target.item_id == item.item_id:
@@ -723,7 +723,7 @@ class SwapManagerApp:
             self.item_sort_reverse = False
         self.refresh_items()
 
-    def _item_sort_key(self, item: backend.ItemRecord) -> tuple[int, str]:
+    def _item_sort_key(self, item: backend.CatalogItem) -> tuple[int, str]:
         if self.item_sort_column == "ID":
             return (0, f"{item.item_id:020d}")
         value = {
@@ -770,8 +770,8 @@ class SwapManagerApp:
                 keys_path=self.settings.keys_path,
                 keys_map_path=self.settings.keys_map_path,
                 source_dir=rl_source_dir,
-                runs_dir=self.runs_dir,
-                work_dir=self.settings.work_path,
+                workspaces_dir=self.workspaces_dir,
+                work_dir=self.settings.decryption_work_path,
                 with_thumbnails=self.include_thumbnails_var.get(),
             )
         except SystemExit as exc:

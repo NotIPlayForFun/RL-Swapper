@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from rl_swapper.backend.upk_swap import (
+from rl_swapper.backend.swap_orchestration.swap_orchestration import (
     initiate_backend,
     infer_thumbnail_name,
     normalize_name,
@@ -17,8 +17,8 @@ from rl_swapper import config
 
 def main() -> int:
     settings = config.load_settings()
-    runs_dir = Path(settings.runs_dir)
-    config.setup_logging(runs_dir)
+    swap_workspaces_dir = Path(settings.workspaces_dir)
+    config.setup_logging(swap_workspaces_dir)
     
     parser = argparse.ArgumentParser(description="Stage a Rocket League UPK swap from filenames")
     parser.add_argument("donor", help="Donor UPK filename to copy the visual data from")
@@ -33,7 +33,7 @@ def main() -> int:
     parser.add_argument("--donor-thumb", default="", help="Override donor thumbnail filename")
     args = parser.parse_args()
 
-    initiate_backend(settings.items_path, settings.swapper_path, runs_dir) # TODO remove ensure_workspace everywhere since files are always there
+    initiate_backend(settings.items_path, settings.swapper_path, swap_workspaces_dir) # TODO remove ensure_workspace everywhere since files are always there
 
     items = load_items(settings.items_path)
     target_name = normalize_name(args.target)
@@ -52,8 +52,8 @@ def main() -> int:
         keys_path=settings.keys_path,
         keys_map_path=settings.keys_map_path,
         source_dir=args.source_dir,
-        runs_dir=runs_dir,
-        work_dir=settings.work_path,
+        workspaces_dir=swap_workspaces_dir,
+        work_dir=settings.decryption_work_path,
         with_thumbnails=args.with_thumbnails,
         target_comment=args.target_comment,
         donor_comment=args.donor_comment,

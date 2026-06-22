@@ -1,11 +1,12 @@
 from contextlib import closing
 import json
 import logging
-from logging import config
+import shutil
 import sqlite3
 from pathlib import Path
 from typing import Iterator, Optional
 
+from rl_swapper import config
 from rl_swapper.backend.swap_store import SwapRecord, SwapRecord
 import rl_swapper.backend.database.db as db
 import rl_swapper.backend.database.swap_repository as db_repo
@@ -13,17 +14,17 @@ import rl_swapper.backend.database.swap_repository as db_repo
 logger = logging.getLogger(__name__)
 
 
-def iter_legacy_manifests(runs_dir: Path) -> Iterator[Path]:
+def iter_legacy_manifests(legacy_runs_dir: Path) -> Iterator[Path]:
     """
     Yield swap.json files under immediate run folders.
     
     Args:
-        runs_dir: Path to the runs directory
+        legacy_runs_dir: Path to the legacy runs directory
         
     Yields:
         Path objects pointing to swap.json files found in run subdirectories
     """
-    for run_folder in runs_dir.iterdir():
+    for run_folder in legacy_runs_dir.iterdir():
         if not run_folder.is_dir():
             continue
         
@@ -34,6 +35,7 @@ def iter_legacy_manifests(runs_dir: Path) -> Iterator[Path]:
 def migrate_legacy_swap_to_new_db(swap: SwapRecord, legacy_folder_path: Path) -> bool:
     """
     Insert a swap folder with a .json-manifest into the SQLite database if it doesn't already exist there.
+    Additionally, create the necessary workspace folder in new workspace structure if not already present.
     Doesn't delete the .json, but is idempotent and can be re-run without creating duplications or issues.
     
     Args:
@@ -45,8 +47,8 @@ def migrate_legacy_swap_to_new_db(swap: SwapRecord, legacy_folder_path: Path) ->
             
             # check for existing record with id = folder name
             legacy_folder_name = legacy_folder_path.name
-            existing = db_repo.get_swap(conn=conn, uuid=legacy_folder_name)
-            if existing:
+            in_db = db_repo.get_swap(conn=conn, uuid=legacy_folder_name)
+            if in_db:
                 # folder already in new db
                 logger.info(f"Found folder on fs that has a legacy .json-manifest but \
                     already corresponds to existing db entry. Skipping migration.")
@@ -55,13 +57,19 @@ def migrate_legacy_swap_to_new_db(swap: SwapRecord, legacy_folder_path: Path) ->
             # migrate to new db
             swap_db: SwapRecord = db_repo.insert_swap(conn=conn, swap=swap)
             
-            # rename folder to match db entry
+            # copy folder to new workspace structure with new name = db id
+            workspaces_dir = config.load_settings().workspaces_path
             new_folder_name = str(swap_db.id)
-            new_folder_path = legacy_folder_path.parent / new_folder_name
-            if legacy_folder_path != new_folder_path:
-                legacy_folder_path.rename(new_folder_path)
-                logger.info(f"Migrated legacy swap manifest from {legacy_folder_path} to new db with id {swap_db.id}, \
-                    renamed folder to {new_folder_name}")
+            new_folder_path = workspaces_dir / new_folder_name
+            if new_folder_path.exists():
+                logger.warning(f"{new_folder_path} already exists but didn't have a corresponding db entry. Aborting.")
+                raise FileExistsError(f"{new_folder_path} already exists but didn't have a corresponding db entry. Aborting.")
+            # copy legacy folder to new location with new name
+            # recursively copy entire folder and subfolders and files to new location with new name
+            # note: also copies the legacy swap.json, but this is ignored by the new system
+            shutil.copytree(legacy_folder_path, new_folder_path)
+            logger.info(f"Migrated legacy swap manifest from {legacy_folder_path} to new db with id {swap_db.id}, \
+                associated fs-folder is named {new_folder_name} and located at {new_folder_path}")
     return True
 
 def load_legacy_swap(manifest_path: Path) -> Optional[SwapRecord]:
@@ -106,12 +114,12 @@ def load_legacy_swap(manifest_path: Path) -> Optional[SwapRecord]:
         raise e
 
 
-def migrate_all_legacy_swaps(runs_dir: Path) -> dict[str, int]:
+def migrate_all_legacy_swaps(legacy_runs_dir: Path) -> dict[str, int]:
     """
-    Migrate all legacy swap.json manifests found in runs_dir into the new database.
+    Migrate all legacy swap.json manifests found in legacy_runs_dir into the new database.
     
     Args:
-        runs_dir: Path to the runs directory containing legacy swap folders with swap.json manifests
+        legacy_runs_dir: Path to the runs directory containing legacy swap folders with swap.json manifests
     Returns:
         A summary dict with counts of total found, successfully migrated, and skipped due to existing db entries.
     """
@@ -122,7 +130,7 @@ def migrate_all_legacy_swaps(runs_dir: Path) -> dict[str, int]:
         "failed": 0
     }
     
-    for manifest_path in iter_legacy_manifests(runs_dir):
+    for manifest_path in iter_legacy_manifests(legacy_runs_dir):
         summary["total_found"] += 1
         try:
             swap = load_legacy_swap(manifest_path)
@@ -137,6 +145,7 @@ def migrate_all_legacy_swaps(runs_dir: Path) -> dict[str, int]:
         except Exception as e:
             logger.error(f"Error migrating {manifest_path}: {e}")
             summary["failed"] += 1
+            raise e
     
     return summary
 

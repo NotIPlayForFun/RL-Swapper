@@ -12,9 +12,11 @@ from typing import Literal
 import uuid
 
 from rl_swapper import config
+from rl_swapper.backend.item_catalog import CatalogItem
 
 # base class containing swap data
-@dataclass
+# TODO move to models.py
+@dataclass(frozen=True)
 class SwapRecord:
     """Data class representing a swap record tied to the sqlite3 db, 
     containing all relevant swap information and metadata."""
@@ -31,17 +33,62 @@ class SwapRecord:
     target_unlock_method: str
     donor_unlock_method: str
     target_asset_package: str
+    """filename.upk of the target"""
     donor_asset_package: str
+    """filename.upk of the donor"""
     target_asset_path: str
+    """internal asset path of the target, e.g. `"Package.Asset"` """
     donor_asset_path: str
+    """internal asset path of the donor, e.g. `"Package.Asset"` """
     with_thumbnails: bool
-    target_thumb_name: str
-    donor_thumb_name: str
+    target_thumb_name: str | None
+    """filename.upk of the target thumbnail, if applicable"""
+    donor_thumb_name: str | None
+    """filename.upk of the donor thumbnail, if applicable"""
     # pushed: bool
     status: Literal["prepared", "pushed", "reverted", "deleted"]
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     pushed_at: str | None = None
+    
+    @classmethod
+    def from_items(
+        cls, 
+        donor: CatalogItem, 
+        target: CatalogItem, 
+        with_thumbnails: bool, 
+        target_thumb_name: str | None, 
+        donor_thumb_name: str | None, 
+        status: Literal["prepared", "pushed", "reverted", "deleted"],
+        **kwargs
+    ) -> SwapRecord:
+        """Factory method to create a SwapRecord from donor and target CatalogItems.
+        
+        Other swap details are required to be passed to force the caller to be explicit about them."""
+        return cls(
+            target_name=target.asset_package,
+            donor_name=donor.asset_package,
+            target_id=target.item_id,
+            donor_id=donor.item_id,
+            target_product=target.product,
+            donor_product=donor.product,
+            target_quality=target.quality,
+            donor_quality=donor.quality,
+            target_slot=target.slot,
+            donor_slot=donor.slot,
+            target_unlock_method=target.unlock_method,
+            donor_unlock_method=donor.unlock_method,
+            target_asset_package=target.asset_package,
+            donor_asset_package=donor.asset_package,
+            target_asset_path=target.asset_path,
+            donor_asset_path=donor.asset_path,
+            with_thumbnails=with_thumbnails,
+            target_thumb_name=target_thumb_name,
+            donor_thumb_name=donor_thumb_name,
+            status=status,
+            pushed_at=None,
+            **kwargs
+        )
     
     def is_pushed(self) -> bool:
         return self.status == "pushed"

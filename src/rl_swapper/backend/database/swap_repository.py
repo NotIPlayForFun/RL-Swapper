@@ -112,29 +112,56 @@ def list_swaps(conn: sqlite3.Connection, include_deleted: bool = False) -> list[
     rows = conn.execute(query).fetchall()
     return [row_to_swap_record(row) for row in rows]
 
-def mark_swap_pushed(conn: sqlite3.Connection, uuid: str, pushed_at_iso: str) -> None:
+def mark_swap_pushed(conn: sqlite3.Connection, uuid: str, pushed_at_iso: str) -> SwapRecord:
     """Update a swap record to mark it as pushed."""
     with conn:
-        conn.execute(
-            "UPDATE swaps SET status = 'pushed', pushed_at = ? WHERE id = ?",
+        row = conn.execute(
+            """UPDATE swaps 
+            SET status = 'pushed', pushed_at = ? 
+            WHERE id = ? 
+            RETURNING *""",
             (pushed_at_iso, uuid)
-        )
+        ).fetchone()
+        # return updated SwapRecord
+        if row is not None:
+            return row_to_swap_record(row)
+        logger.error(f"Failed to mark swap with ID {uuid} as pushed: no record found.")
+        raise ValueError(f"Failed to mark swap with ID {uuid} as pushed: no record found.")
 
-def mark_swap_reverted(conn: sqlite3.Connection, uuid: str) -> None:
+# TODO figure out whether its best practice to get uuid or get SwapRecord,
+# and to return an updated SwapRecord reflecting the db state or None
+def mark_swap_reverted(conn: sqlite3.Connection, uuid: str) -> SwapRecord:
     """Update a swap record to mark it as reverted."""
     with conn:
-        conn.execute(
-            "UPDATE swaps SET status = 'reverted', pushed_at = NULL WHERE id = ?",
+        row = conn.execute(
+            """UPDATE swaps 
+            SET status = 'reverted', pushed_at = NULL 
+            WHERE id = ?
+            RETURNING *""",
             (uuid,)
-        )
+        ).fetchone()
+        # return updated SwapRecord
+        if row is not None:
+            return row_to_swap_record(row)
+        logger.error(f"Failed to mark swap with ID {uuid} as reverted: no record found.")
+        raise ValueError(f"Failed to mark swap with ID {uuid} as reverted: no record found.")
 
-def mark_swap_deleted(conn: sqlite3.Connection, uuid: str) -> None:
+def mark_swap_deleted(conn: sqlite3.Connection, uuid: str) -> SwapRecord:
     """Update a swap record to mark it as deleted."""
     with conn:
-        conn.execute(
-            "UPDATE swaps SET status = 'deleted' WHERE id = ?",
+        row = conn.execute(
+            """
+            UPDATE swaps 
+            SET status = 'deleted' 
+            WHERE id = ? 
+            RETURNING *""",
             (uuid,)
-        )
+        ).fetchone()
+        # return updated SwapRecord
+        if row is not None:
+            return row_to_swap_record(row)
+        logger.error(f"Failed to mark swap with ID {uuid} as deleted: no record found.")
+        raise ValueError(f"Failed to mark swap with ID {uuid} as deleted: no record found.")
 
 @deprecated("We only need to update or insert, both was only used for compatibility with run_name \
         which we no longer use. Use insert_swap or update_swap instead.")
