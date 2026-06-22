@@ -57,7 +57,7 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 from rl_swapper import config
-from rl_swapper.backend.swap_store import SwapRecord, SwapRecord
+from rl_swapper.backend.models import SwapRecord
 import rl_swapper.backend.database.db as db
 import rl_swapper.backend.database.swap_repository as db_repo
 
@@ -188,7 +188,7 @@ def load_legacy_swap(manifest_path: Path) -> Optional[SwapRecord]:
             donor_thumb_name=data.get("donor_thumb_name"),
             status=data["status"],
             pushed_at=data.get("pushed_at"),
-            created_at=data.get("created_at")
+            created_at=data.get("created_at", "")
         )
     except (KeyError, TypeError, ValueError) as e:
         logger.warning(f"Failed to create SwapRecord from {manifest_path}: {e}")

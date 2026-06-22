@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 import shutil
 
-from rl_swapper.backend.swap_orchestration.models import SwapWorkspacePaths
+from rl_swapper.backend.models import SwapWorkspacePaths
 from rl_swapper.config import AppSettings, load_settings
-from rl_swapper.backend.swap_store import SwapRecord
+from rl_swapper.backend.models import SwapRecord
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from warnings import deprecated
 
 logger = logging.getLogger(__name__)
 
-from rl_swapper.backend.swap_store import SwapRecord, SwapRecord
+from rl_swapper.backend.models import SwapRecord
 from rl_swapper.backend.database.query_helpers import (
     SWAP_DATA_COLUMNS,
     columns_to_stringlist,

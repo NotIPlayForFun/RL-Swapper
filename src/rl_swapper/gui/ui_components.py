@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from tkinter import BOTH, RIGHT, LEFT, Y, X, Canvas, Frame, Label
 from tkinter import ttk
-
-import rl_swapper.backend.swap_orchestration.swap_orchestration as backend
+import rl_swapper.backend.models as backend
 
 CARD = "#171d2b"
 CARD_SELECTED = "#20283a"

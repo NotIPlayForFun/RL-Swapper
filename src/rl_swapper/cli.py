@@ -8,8 +8,8 @@ from pathlib import Path
 
 from rl_swapper.backend.swap_orchestration.swap_orchestration import (
     initiate_backend,
-    infer_thumbnail_name,
-    normalize_name,
+    _infer_thumbnail_name,
+    _normalize_name,
     prepare_swap,
 )
 from rl_swapper.backend.item_catalog import find_item_by_filename, load_items
@@ -36,10 +36,10 @@ def main() -> int:
     initiate_backend(settings.items_path, settings.swapper_path, swap_workspaces_dir) # TODO remove ensure_workspace everywhere since files are always there
 
     items = load_items(settings.items_path)
-    target_name = normalize_name(args.target)
-    donor_name = normalize_name(args.donor)
-    target_thumb_name = normalize_name(args.target_thumb) if args.target_thumb else infer_thumbnail_name(target_name)
-    donor_thumb_name = normalize_name(args.donor_thumb) if args.donor_thumb else infer_thumbnail_name(donor_name)
+    target_name = _normalize_name(args.target)
+    donor_name = _normalize_name(args.donor)
+    target_thumb_name = _normalize_name(args.target_thumb) if args.target_thumb else _infer_thumbnail_name(target_name)
+    donor_thumb_name = _normalize_name(args.donor_thumb) if args.donor_thumb else _infer_thumbnail_name(donor_name)
 
     target_item = find_item_by_filename(target_name, items)
     donor_item = find_item_by_filename(donor_name, items)

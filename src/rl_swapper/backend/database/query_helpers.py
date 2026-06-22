@@ -1,4 +1,4 @@
-from rl_swapper.backend.swap_store import SwapRecord
+from rl_swapper.backend.models import SwapRecord
 
 
 SWAP_DATA_COLUMNS = [
