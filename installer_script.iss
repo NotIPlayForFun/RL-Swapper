@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "RL Swapper"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "NotIPlayForFun"
 #define MyAppExeName "rl-swapper.exe"
 
@@ -30,7 +30,7 @@ DisableProgramGroupPage=yes
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=D:\!new_stuff\rl_upk_swapper\rl_swapper
-OutputBaseFilename=RL_Swapper_Setup_v0.1.0
+OutputBaseFilename=RL_Swapper_Setup_v{#MyAppVersion}
 SolidCompression=yes
 WizardStyle=modern dark polar
 

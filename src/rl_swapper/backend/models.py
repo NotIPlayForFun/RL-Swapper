@@ -25,6 +25,7 @@ from rl_swapper.config import load_settings
 class SwapRecord:
     """Data class representing a swap record tied to the sqlite3 db, 
     containing all relevant swap information and metadata."""
+    installation_key: Literal["EpicGames", "Steam"]
     target_name: str
     donor_name: str
     target_id: int
@@ -59,6 +60,7 @@ class SwapRecord:
     @classmethod
     def from_items(
         cls,
+        installation_key: Literal["EpicGames", "Steam"],
         donor: CatalogItem,
         target: CatalogItem,
         with_thumbnails: bool,
@@ -71,6 +73,7 @@ class SwapRecord:
 
         Other swap details are required to be passed to force the caller to be explicit about them."""
         return cls(
+            installation_key=installation_key,
             target_name=target.asset_package,
             donor_name=donor.asset_package,
             target_id=target.item_id,
@@ -113,7 +116,7 @@ class SwapWorkspacePaths:
     def from_swap_record(cls, swap_record: SwapRecord) -> "SwapWorkspacePaths":
         """Construct SwapWorkspacePaths from a SwapRecord."""
         settings = load_settings()
-        workspace_dir = Path(settings.workspaces_dir) / f"{swap_record.id}"
+        workspace_dir = Path(settings._workspaces_dir) / f"{swap_record.id}"
         return cls(
             workspace_dir=workspace_dir,
             # TODO consider changing "source" to "input" to separet it from the original source dir.

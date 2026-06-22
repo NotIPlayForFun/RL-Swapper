@@ -17,6 +17,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from rl_swapper.backend.database import db
 import rl_swapper.backend.database.swap_repository as swap_repo
@@ -195,6 +196,7 @@ def _asset_swapper_cli_helper(
 
 # prepare_swap implemented using the new fs and db layers and config
 def prepare_swap(
+    installation_key: Literal["EpicGames", "Steam"],
     donor: CatalogItem,
     target: CatalogItem,
     with_thumbnails: bool = False,
@@ -218,6 +220,7 @@ def prepare_swap(
         with conn:
             # create swap record
             swap = SwapRecord.from_items(
+                installation_key=installation_key,
                 donor=donor, 
                 target=target, 
                 with_thumbnails=with_thumbnails,

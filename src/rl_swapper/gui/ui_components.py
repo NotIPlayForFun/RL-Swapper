@@ -191,6 +191,17 @@ class SwapCard(Frame):
         )
         status.pack(side=LEFT)
 
+        install_key_badge = Label(
+            header_row,
+            text=self.swap.installation_key,
+            bg=PANEL_ALT,
+            fg=TEXT,
+            padx=10,
+            pady=3,
+            font=("Segoe UI", 9, "bold"),
+        )
+        install_key_badge.pack(side=LEFT, padx=(8, 0))
+
         if not self.swap.is_pushed():
             ttk.Button(
                 header_row,

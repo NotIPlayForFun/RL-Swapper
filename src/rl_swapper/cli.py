@@ -17,13 +17,13 @@ from rl_swapper import config
 
 def main() -> int:
     settings = config.load_settings()
-    swap_workspaces_dir = Path(settings.workspaces_dir)
+    swap_workspaces_dir = Path(settings._workspaces_dir)
     config.setup_logging(swap_workspaces_dir)
     
     parser = argparse.ArgumentParser(description="Stage a Rocket League UPK swap from filenames")
     parser.add_argument("donor", help="Donor UPK filename to copy the visual data from")
     parser.add_argument("target", help="Target UPK filename to be replaced")
-    parser.add_argument("--source-dir", type=Path, default=Path(settings.rl_source_dir), help="Folder containing the donor and target UPKs to stage from")
+    parser.add_argument("--source-dir", type=Path, default=Path(settings._rl_source_dir), help="Folder containing the donor and target UPKs to stage from")
     parser.add_argument("--with-thumbnails", action="store_true", help="Also swap the thumbnail packages")
     parser.add_argument("--write-back", action="store_true", help="Copy the swapped target back into the live RL folder")
     parser.add_argument("--target-comment", default="", help="Short comment for the target decal")

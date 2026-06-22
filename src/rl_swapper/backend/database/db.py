@@ -27,6 +27,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS swaps (
             id TEXT PRIMARY KEY,
+            installation_key TEXT NOT NULL CHECK(installation_key IN ('EpicGames', 'Steam')),
             target_name TEXT NOT NULL,
             donor_name TEXT NOT NULL,
             target_id INTEGER NOT NULL,

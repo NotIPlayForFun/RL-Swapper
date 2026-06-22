@@ -14,6 +14,7 @@ import os
 import subprocess
 import shutil
 from datetime import datetime
+from typing import Literal
 import rl_swapper.backend.models
 import rl_swapper.backend.swap_orchestration.swap_orchestration as backend
 from rl_swapper.backend.item_catalog import (
@@ -28,7 +29,6 @@ from rl_swapper.gui.ui_components import ScrollableFrame, SwapCard, swap_border_
 from rl_swapper.backend.models import SwapWorkspacePaths
 from tkinter import BOTH, END, LEFT, RIGHT, X, Y, BooleanVar, Canvas, Entry, Frame, Label, StringVar, Tk, TclError, Text, Toplevel, messagebox
 from tkinter import ttk
-from pathlib import Path
 
 BG = "#0f1117"
 PANEL = "#151925"
@@ -102,6 +102,7 @@ def format_swap_details(swap: rl_swapper.backend.models.SwapRecord | None) -> st
         [
             f"Run: {swap.id}", # TODO run is deprecated, using id (uuid of database record) for now
             f"Status: {'Pushed' if swap.is_pushed() else 'Prepared, not pushed'}", 
+            f"Installation: {swap.installation_key}",
             f"Created: {swap.created_at}",
             f"Pushed at: {swap.pushed_at or '(not pushed)'}",
             "",
@@ -155,6 +156,7 @@ class SwapManagerApp:
         self.search_var = StringVar(value="")
         self.status_var = StringVar(value="Ready")
         self.include_thumbnails_var = BooleanVar(value=False)
+        self.installation_key_var = StringVar(value="EpicGames")
 
         self._build_style()
         self._build_shell()
@@ -324,6 +326,24 @@ class SwapManagerApp:
         self.target_chip.bind("<Button-1>", lambda e: self._clear_target())
         
         # Prepare swap button row (right-aligned on same row)
+        Label(selection_row, text="Installation", bg=BG, fg=MUTED, font=("Segoe UI", 10)).pack(side=RIGHT, padx=(0, 8))
+        install_key_buttons = Frame(selection_row, bg=BG)
+        install_key_buttons.pack(side=RIGHT, padx=(0, 10))
+        self.epic_installation_button = ttk.Button(
+            install_key_buttons,
+            text="EpicGames",
+            command=lambda: self._set_installation_key("EpicGames"),
+            width=12,
+        )
+        self.epic_installation_button.pack(side=LEFT, padx=(0, 6))
+        self.steam_installation_button = ttk.Button(
+            install_key_buttons,
+            text="Steam",
+            command=lambda: self._set_installation_key("Steam"),
+            width=12,
+        )
+        self.steam_installation_button.pack(side=LEFT)
+        self._refresh_installation_key_buttons()
         ttk.Button(selection_row, text="Prepare Swap", style="Accent.TButton", command=self.prepare_selected_swap).pack(side=RIGHT)
         ttk.Checkbutton(selection_row, text="Include thumbnails", variable=self.include_thumbnails_var).pack(side=RIGHT, padx=(0, 10))
 
@@ -393,6 +413,7 @@ class SwapManagerApp:
                 or query in swap.donor_product.lower()
                 or query in (swap.target_slot or "").lower()
                 or query in (swap.donor_slot or "").lower()
+                or query in swap.installation_key.lower()
                 or query in ("pushed" if swap.is_pushed() else "prepared")
             ]
         if select_run_name is not None:
@@ -450,6 +471,15 @@ class SwapManagerApp:
         widget.delete("1.0", END)
         widget.insert("1.0", text)
         widget.configure(state="disabled")
+
+    def _set_installation_key(self, installation_key: Literal["EpicGames", "Steam"]) -> None:
+        self.installation_key_var.set(installation_key)
+        self._refresh_installation_key_buttons()
+
+    def _refresh_installation_key_buttons(self) -> None:
+        selected_key = self.installation_key_var.get()
+        self.epic_installation_button.configure(style="Accent.TButton" if selected_key == "EpicGames" else "Ghost.TButton")
+        self.steam_installation_button.configure(style="Accent.TButton" if selected_key == "Steam" else "Ghost.TButton")
 
     def _set_item_text(self, widget: Text, text: str) -> None:
         self._set_text_widget(widget, text)
@@ -768,8 +798,10 @@ class SwapManagerApp:
             self.status_var.set("Swap blocked: donor and target slots do not match")
             return
         try:
-            rl_source_dir = Path(self.settings.rl_source_dir)
+            installation_key_raw = self.installation_key_var.get().strip()
+            installation_key: Literal["EpicGames", "Steam"] = "Steam" if installation_key_raw == "Steam" else "EpicGames"
             swap = backend.prepare_swap(
+                installation_key=installation_key,
                 donor=self.selected_donor,
                 target=self.selected_target,
                 with_thumbnails=self.include_thumbnails_var.get(),
@@ -801,6 +833,12 @@ class SwapManagerApp:
         messagebox.showinfo("Swap prepared", f"Prepared swap:\n{swap.id}")
 
     def confirm_push_swap(self, swap: rl_swapper.backend.models.SwapRecord) -> None:
+        # show popup showing the path:
+        paths = SwapWorkspacePaths.from_swap_record(swap)
+        messagebox.showinfo("Path to be pushed to:", str(config.load_settings().installations[swap.installation_key]))
+        
+
+        # show popup asking confirmation:
         if not messagebox.askyesno("Confirm push", f"Mark '{swap.id}' as pushed?\n\nThis will copy the prepared files into the live RL folder and update the saved swap state."):
             return
         try:

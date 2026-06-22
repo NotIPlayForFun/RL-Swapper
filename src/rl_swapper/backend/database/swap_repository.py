@@ -18,6 +18,7 @@ def row_to_swap_record(row: sqlite3.Row) -> SwapRecord:
     
     return SwapRecord(
         id=row["id"],
+        installation_key=row["installation_key"],
         target_name=row["target_name"],
         donor_name=row["donor_name"],
         target_id=row["target_id"],
